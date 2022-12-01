@@ -1,3 +1,6 @@
+`ifndef MEM_CTRL
+`define MEM_CTRL
+`include "macros.v"
 module MemCtrl (
     input wire clk,
     input wire rst,
@@ -11,10 +14,10 @@ module MemCtrl (
     input wire io_buffer_full,  // 1 if uart buffer is full
 
     // instruction fetch
-    input  wire        if_en,
-    input  wire [31:0] if_pc,
-    output reg         if_done,
-    output reg  [31:0] if_data
+    input  wire             if_en,
+    input  wire [`ADDR_WID] if_pc,
+    output reg              if_done,
+    output reg  [`DATA_WID] if_data
 );
 
   localparam IDLE = 0, IF = 1, LOAD = 2, STORE = 3;
@@ -56,5 +59,5 @@ module MemCtrl (
       end
     end
   end
-
 endmodule
+`endif  // MEM_CTRL

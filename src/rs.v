@@ -1,0 +1,4 @@
+`ifndef RESERVATION_STATION
+`define RESERVATION_STATION
+`include "macros.v"
+`endif // RESERVATION_STATION

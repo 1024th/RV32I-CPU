@@ -1,25 +1,28 @@
+`ifndef IFETCH
+`define IFETCH
+`include "macros.v"
 module IFetch (
     input wire clk,
     input wire rst,
     input wire rdy,
 
     // to Instruction Decoder
-    output reg [31:0] inst,
-    output reg        inst_rdy,
+    output reg             inst_rdy,
+    output reg [`INST_WID] inst,
 
     // to Memory Controller
-    output reg         mc_en,
-    output reg  [31:0] mc_pc,
-    input  wire        mc_done,
-    input  wire [31:0] mc_data,
+    output reg              mc_en,
+    output reg  [`ADDR_WID] mc_pc,
+    input  wire             mc_done,
+    input  wire [`DATA_WID] mc_data,
 
     // from Reorder Buffer, set pc
-    input wire rob_pc_en,
-    input wire [31:0] rob_pc
+    input wire             rob_pc_en,
+    input wire [`ADDR_WID] rob_pc
 );
 
   localparam IDLE = 0, WAIT_MEM = 1;
-  reg [31:0] pc;
+  reg [`ADDR_WID] pc;
   reg status;
 
   // Instruction Cache
@@ -28,7 +31,7 @@ module IFetch (
   `define TAG_RANGE 31:10
   reg valid[`ICACHE_SIZE-1:0];
   reg [`TAG_RANGE] tag[`ICACHE_SIZE-1:0];
-  reg [31:0] data[`ICACHE_SIZE-1:0];
+  reg [`DATA_WID] data[`ICACHE_SIZE-1:0];
 
   wire pc_index = pc[`INDEX_RANGE];
   wire pc_tag = pc[`TAG_RANGE];
@@ -79,3 +82,4 @@ module IFetch (
   end
 
 endmodule
+`endif  // IFETCH
