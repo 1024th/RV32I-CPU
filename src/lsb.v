@@ -51,7 +51,7 @@ module LSB (
 
     // Reorder Buffer commits store
     input wire                commit_store,
-    input wire [`REG_POS_WID] commit_rob_pos
+    input wire [`ROB_POS_WID] commit_rob_pos
 );
   integer i;
   `define LSB_SIZE 16

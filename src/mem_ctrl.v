@@ -36,16 +36,16 @@ module MemCtrl (
 
   always @(posedge clk) begin
     if (rst) begin
-      status  <= IDLE;
-      if_done <= 0;
+      status   <= IDLE;
+      if_done  <= 0;
       lsb_done <= 0;
-      mem_wr  <= 0;
-      mem_a   <= 0;
+      mem_wr   <= 0;
+      mem_a    <= 0;
     end else if (!rdy) begin
-      if_done <= 0;
+      if_done  <= 0;
       lsb_done <= 0;
-      mem_wr  <= 0;
-      mem_a   <= 0;
+      mem_wr   <= 0;
+      mem_a    <= 0;
     end else begin
       if (status != IDLE) begin
         if (stage == len) begin
@@ -58,6 +58,7 @@ module MemCtrl (
           stage <= stage + 1;
         end
       end
+      mem_wr <= 0;
       case (status)
         IF: begin
           case (stage)
@@ -82,31 +83,30 @@ module MemCtrl (
           end
         end
         STORE: begin
-          case (stage)
-            3'h1: mem_dout <= lsb_w_data[7:0];
-            3'h2: mem_dout <= lsb_w_data[15:8];
-            3'h3: mem_dout <= lsb_w_data[23:16];
-            3'h4: mem_dout <= lsb_w_data[31:24];
-          endcase
-          if (stage == len) begin
-            lsb_done <= 1;
+          if (mem_a[17:16] != 2'b11 || !io_buffer_full) begin
+            mem_wr <= 1;
+            case (stage)
+              3'h1: mem_dout <= lsb_w_data[7:0];
+              3'h2: mem_dout <= lsb_w_data[15:8];
+              3'h3: mem_dout <= lsb_w_data[23:16];
+              3'h4: mem_dout <= lsb_w_data[31:24];
+            endcase
+            if (stage == len) lsb_done <= 1;
           end
         end
         IDLE: begin
           if_done  <= 0;
           lsb_done <= 0;
           if (lsb_en) begin
-            status   <= lsb_wr ? STORE : LOAD;
-            mem_wr   <= lsb_wr;
-            mem_a    <= lsb_pc;
-            stage    <= 3'h1;
-            len      <= lsb_len;
+            status <= lsb_wr ? STORE : LOAD;
+            mem_a  <= lsb_pc;
+            stage  <= 3'h1;
+            len    <= lsb_len;
           end else if (if_en) begin
-            status  <= IF;
-            mem_wr  <= 0;
-            mem_a   <= if_pc;
-            stage   <= 3'h1;
-            len     <= 3'd4;
+            status <= IF;
+            mem_a  <= if_pc;
+            stage  <= 3'h1;
+            len    <= 3'd4;
           end
         end
       endcase

@@ -9,6 +9,7 @@ module IFetch (
     // to Instruction Decoder
     output reg             inst_rdy,
     output reg [`INST_WID] inst,
+    output reg [`ADDR_WID] inst_pc,
 
     // to Memory Controller
     output reg              mc_en,
@@ -17,8 +18,8 @@ module IFetch (
     input  wire [`DATA_WID] mc_data,
 
     // from Reorder Buffer, set pc
-    input wire             rob_pc_en,
-    input wire [`ADDR_WID] rob_pc
+    input wire             rob_set_pc_en,
+    input wire [`ADDR_WID] rob_set_pc
 );
 
   localparam IDLE = 0, WAIT_MEM = 1;
@@ -50,15 +51,16 @@ module IFetch (
       end
     end else
     if (!rdy) begin
-    end else if (rob_pc_en) begin
+    end else if (rob_set_pc_en) begin
       inst_rdy <= 0;
-      pc <= rob_pc;
+      pc <= rob_set_pc;
       mc_en <= 0;
       status <= IDLE;
     end else begin
       if (hit) begin
         inst_rdy <= 1;
         inst <= data[pc_index];
+        inst_pc <= pc;
         pc <= pc + 32'h4;  // TODO: predict
       end else begin
         inst_rdy <= 0;

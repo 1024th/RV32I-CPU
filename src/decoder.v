@@ -45,15 +45,15 @@ module Decoder (
     input  wire [   `DATA_WID] rob_rs2_val,
 
     // Reservation Station
-    input  wire rs_full,
+    input  wire rs_nxt_full,
     output reg  rs_en,
 
     // Load Store Buffer
-    input  wire lsb_full,
+    input  wire lsb_nxt_full,
     output reg  lsb_en,
 
     // Reorder Buffer
-    input wire                rob_full,
+    input wire                rob_nxt_full,
     input wire [`ROB_POS_WID] nxt_rob_pos,
 
     // handle the broadcast
@@ -72,7 +72,7 @@ module Decoder (
   assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
 
   always @(posedge clk) begin
-    if (rst || !inst_rdy || rs_full || lsb_full || rollback) begin
+    if (rst || !inst_rdy || rs_nxt_full || lsb_nxt_full || rollback) begin
       issue  <= 0;
       lsb_en <= 0;
       rs_en  <= 0;
@@ -86,6 +86,7 @@ module Decoder (
       funct3 <= inst[14:12];
       funct7 <= inst[30];
       rd <= inst[11:7];
+      pc <= inst_pc;
 
       rs1_rob_id <= 0;
       if (reg_rs1_rob_id[4] == 0) begin
