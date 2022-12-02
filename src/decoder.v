@@ -7,6 +7,8 @@ module Decoder (
     input wire rst,
     input wire rdy,
 
+    input wire rollback,
+
     // from Instruction Fetcher
     input wire             inst_rdy,
     input wire [`INST_WID] inst,
@@ -28,19 +30,19 @@ module Decoder (
 
     // query in Register File
     output wire [`REG_POS_WID] reg_rs1,
-    input  wire [   `DATA_WID] reg_val1,
-    input  wire [ `ROB_ID_WID] reg_rob_id1,
+    input  wire [   `DATA_WID] reg_rs1_val,
+    input  wire [ `ROB_ID_WID] reg_rs1_rob_id,
     output wire [`REG_POS_WID] reg_rs2,
-    input  wire [   `DATA_WID] reg_val2,
-    input  wire [ `ROB_ID_WID] reg_rob_id2,
+    input  wire [   `DATA_WID] reg_rs2_val,
+    input  wire [ `ROB_ID_WID] reg_rs2_rob_id,
 
     // query in Reorder Buffer
-    output wire [`ROB_POS_WID] rob_pos1,
-    input  wire                rob_ready1,
-    input  wire [   `DATA_WID] rob_val1,
-    output wire [`ROB_POS_WID] rob_pos2,
-    input  wire                rob_ready2,
-    input  wire [   `DATA_WID] rob_val2,
+    output wire [`ROB_POS_WID] rob_rs1_pos,
+    input  wire                rob_rs1_ready,
+    input  wire [   `DATA_WID] rob_rs1_val,
+    output wire [`ROB_POS_WID] rob_rs2_pos,
+    input  wire                rob_rs2_ready,
+    input  wire [   `DATA_WID] rob_rs2_val,
 
     // Reservation Station
     input  wire rs_full,
@@ -56,22 +58,26 @@ module Decoder (
 
     // handle the broadcast
     // from Reservation Station
-    input wire rs_result,
-    input wire [`ROB_ID_WID] rs_result_rob_id,
-    input wire [`DATA_WID] rs_result_val,
+    input wire alu_result,
+    input wire [`ROB_POS_WID] alu_result_rob_pos,
+    input wire [`DATA_WID] alu_result_val,
     // from Load Store Buffer
     input wire lsb_result,
-    input wire [`ROB_ID_WID] lsb_result_rob_id,
+    input wire [`ROB_POS_WID] lsb_result_rob_pos,
     input wire [`DATA_WID] lsb_result_val
 );
-  assign reg_rs1  = inst[19:15];
-  assign reg_rs2  = inst[24:20];
-  assign rob_pos1 = reg_rob_id1[`ROB_POS_WID];
-  assign rob_pos2 = reg_rob_id2[`ROB_POS_WID];
+  assign reg_rs1 = inst[19:15];
+  assign reg_rs2 = inst[24:20];
+  assign rob_rs1_pos = reg_rs1_rob_id[`ROB_POS_WID];
+  assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
 
   always @(posedge clk) begin
-    if (!inst_rdy || rs_full || lsb_full) begin
-      issue <= 0;
+    if (rst || !inst_rdy || rs_full || lsb_full || rollback) begin
+      issue  <= 0;
+      lsb_en <= 0;
+      rs_en  <= 0;
+    end else if (!rdy) begin
+      ;
     end else begin
       issue <= 1;
       rob_pos <= nxt_rob_pos;
@@ -82,42 +88,72 @@ module Decoder (
       rd <= inst[11:7];
 
       rs1_rob_id <= 0;
-      if (reg_rob_id1[4] == 0) begin
-        rs1_val <= reg_val1;
-      end else if (rob_ready1) begin
-        rs1_val <= rob_val1;
-      end else if (rs_result && reg_rob_id1 == rs_result_rob_id) begin
-        rs1_val <= rs_result_val;
-      end else if (lsb_result && reg_rob_id1 == lsb_result_rob_id) begin
+      if (reg_rs1_rob_id[4] == 0) begin
+        rs1_val <= reg_rs1_val;
+      end else if (rob_rs1_ready) begin
+        rs1_val <= rob_rs1_val;
+      end else if (alu_result && rob_rs1_pos == alu_result_rob_pos) begin
+        rs1_val <= alu_result_val;
+      end else if (lsb_result && rob_rs1_pos == lsb_result_rob_pos) begin
         rs1_val <= lsb_result_val;
       end else begin
         rs1_val <= 0;
-        rs1_rob_id <= reg_rob_id1;
+        rs1_rob_id <= reg_rs1_rob_id;
       end
 
       rs2_rob_id <= 0;
-      if (reg_rob_id2[4] == 0) begin
-        rs2_val <= reg_val2;
-      end else if (rob_ready2) begin
-        rs2_val <= rob_val2;
-      end else if (rs_result && reg_rob_id2 == rs_result_rob_id) begin
-        rs2_val <= rs_result_val;
-      end else if (lsb_result && reg_rob_id2 == lsb_result_rob_id) begin
+      if (reg_rs2_rob_id[4] == 0) begin
+        rs2_val <= reg_rs2_val;
+      end else if (rob_rs2_ready) begin
+        rs2_val <= rob_rs2_val;
+      end else if (alu_result && rob_rs2_pos == alu_result_rob_pos) begin
+        rs2_val <= alu_result_val;
+      end else if (lsb_result && rob_rs2_pos == lsb_result_rob_pos) begin
         rs2_val <= lsb_result_val;
       end else begin
         rs2_val <= 0;
-        rs2_rob_id <= reg_rob_id2;
+        rs2_rob_id <= reg_rs2_rob_id;
       end
 
       lsb_en <= 0;
       rs_en  <= 0;
+      // mask unused rs1 rs2
       case (opcode)
-        `OPCODE_S: lsb_en <= 1;
-        `OPCODE_L: lsb_en <= 1;
-        `OPCODE_ARITHI: rs_en <= 1;
+        `OPCODE_S: begin
+          lsb_en <= 1;
+          imm    <= {{21{inst[31]}}, inst[30:25], inst[11:7]};
+        end
+        `OPCODE_L: begin
+          rs2_rob_id <= 0;
+          rs2_val    <= 0;
+          lsb_en     <= 1;
+          imm        <= {{21{inst[31]}}, inst[30:20]};
+        end
+        `OPCODE_ARITHI, `OPCODE_JALR: begin
+          rs2_rob_id <= 0;
+          rs2_val    <= 0;
+          rs_en      <= 1;
+          imm        <= {{21{inst[31]}}, inst[30:20]};
+        end
         `OPCODE_ARITH: rs_en <= 1;
-        `OPCODE_JALR: rs_en <= 1;
-        `OPCODE_BR: rs_en <= 1;
+        `OPCODE_JAL: begin
+          rs1_rob_id <= 0;
+          rs1_val    <= 0;
+          rs2_rob_id <= 0;
+          rs2_val    <= 0;
+          imm        <= {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
+        end
+        `OPCODE_BR: begin
+          rs_en <= 1;
+          imm   <= {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
+        end
+        `OPCODE_LUI, `OPCODE_AUIPC: begin
+          rs1_rob_id <= 0;
+          rs1_val    <= 0;
+          rs2_rob_id <= 0;
+          rs2_val    <= 0;
+          imm        <= {inst[31:12], 12'b0};
+        end
       endcase
     end
   end
