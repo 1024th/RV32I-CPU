@@ -13,6 +13,7 @@ module Decoder (
     input wire             inst_rdy,
     input wire [`INST_WID] inst,
     input wire [`ADDR_WID] inst_pc,
+    input wire             inst_pred_jump,
 
     // issue instruction
     output reg                issue,
@@ -27,6 +28,8 @@ module Decoder (
     output reg [   `DATA_WID] imm,
     output reg [`REG_POS_WID] rd,
     output reg [   `ADDR_WID] pc,
+    output reg                pred_jump,
+    output reg                is_ready,
 
     // query in Register File
     output wire [`REG_POS_WID] reg_rs1,
@@ -53,8 +56,8 @@ module Decoder (
     output reg  lsb_en,
 
     // Reorder Buffer
-    input wire                rob_nxt_full,
-    input wire [`ROB_POS_WID] nxt_rob_pos,
+    input  wire                rob_nxt_full,
+    input  wire [`ROB_POS_WID] nxt_rob_pos,
 
     // handle the broadcast
     // from Reservation Station
@@ -66,8 +69,8 @@ module Decoder (
     input wire [`ROB_POS_WID] lsb_result_rob_pos,
     input wire [`DATA_WID] lsb_result_val
 );
-  assign reg_rs1 = inst[19:15];
-  assign reg_rs2 = inst[24:20];
+  assign reg_rs1 = inst[`RS1_RANGE];
+  assign reg_rs2 = inst[`RS2_RANGE];
   assign rob_rs1_pos = reg_rs1_rob_id[`ROB_POS_WID];
   assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
 
@@ -82,11 +85,12 @@ module Decoder (
       issue <= 1;
       rob_pos <= nxt_rob_pos;
 
-      opcode <= inst[6:0];
-      funct3 <= inst[14:12];
+      opcode <= inst[`OPCODE_RANGE];
+      funct3 <= inst[`FUNCT3_RANGE];
       funct7 <= inst[30];
-      rd <= inst[11:7];
+      rd <= inst[`RD_RANGE];
       pc <= inst_pc;
+      pred_jump <= inst_pred_jump;
 
       rs1_rob_id <= 0;
       if (reg_rs1_rob_id[4] == 0) begin
@@ -117,10 +121,12 @@ module Decoder (
       end
 
       lsb_en <= 0;
-      rs_en  <= 0;
+      rs_en <= 0;
+      is_ready <= 0;
       // mask unused rs1 rs2
-      case (opcode)
+      case (inst[`OPCODE_RANGE])
         `OPCODE_S: begin
+          is_ready <= 1;
           lsb_en <= 1;
           imm    <= {{21{inst[31]}}, inst[30:25], inst[11:7]};
         end
@@ -138,6 +144,7 @@ module Decoder (
         end
         `OPCODE_ARITH: rs_en <= 1;
         `OPCODE_JAL: begin
+          rs_en <= 1;
           rs1_rob_id <= 0;
           rs1_val    <= 0;
           rs2_rob_id <= 0;
@@ -149,6 +156,7 @@ module Decoder (
           imm   <= {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
         end
         `OPCODE_LUI, `OPCODE_AUIPC: begin
+          rs_en <= 1;
           rs1_rob_id <= 0;
           rs1_val    <= 0;
           rs2_rob_id <= 0;

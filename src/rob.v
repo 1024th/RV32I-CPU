@@ -19,6 +19,8 @@ module ROB (
     input wire [ `OPCODE_WID] issue_opcode,
     input wire [   `ADDR_WID] issue_pc,
     input wire                issue_pred_jump,
+    input wire                issue_is_ready,
+    input wire [   `DATA_WID] issue_rd_val,
 
     // commit
     output reg [`ROB_POS_WID] commit_rob_pos,
@@ -47,7 +49,8 @@ module ROB (
     output wire [   `DATA_WID] rs1_val,
     input  wire [`ROB_POS_WID] rs2_pos,
     output wire                rs2_ready,
-    output wire [   `DATA_WID] rs2_val
+    output wire [   `DATA_WID] rs2_val,
+    output wire [`ROB_POS_WID] nxt_rob_pos
 );
 
   reg                ready    [`ROB_SIZE-1:0];
@@ -62,6 +65,7 @@ module ROB (
   wire commit = !empty && ready[head];
   wire [`ROB_POS_WID] nxt_head = head + commit;
   wire [`ROB_POS_WID] nxt_tail = tail + issue;
+  assign nxt_rob_pos  = nxt_tail;
   // TODO: check
   assign rob_nxt_full = (nxt_head == nxt_tail && !empty);
   wire nxt_empty = (nxt_head == nxt_tail && (empty || !issue));
@@ -79,6 +83,8 @@ module ROB (
       tail <= 0;
       empty <= 1;
       rollback <= 0;
+      if_set_pc_en <= 0;
+      if_set_pc <= 0;
       for (i = 0; i < `ROB_SIZE; i += 1) begin
         ready[i] <= 0;
         rd[i] <= 0;
@@ -99,9 +105,8 @@ module ROB (
         opcode[tail]    <= issue_opcode;
         pc[tail]        <= issue_pc;
         pred_jump[tail] <= issue_pred_jump;
-        if (issue_opcode == `OPCODE_S) ready[tail] <= 1;
-        else ready[tail] <= 0;
-        tail <= tail + 1'b1;
+        ready[tail]     <= issue_is_ready;
+        tail            <= tail + 1'b1;
       end
       // update result
       if (alu_result) begin

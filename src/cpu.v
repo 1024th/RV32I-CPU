@@ -54,7 +54,7 @@ module cpu (
   wire if_to_mc_en;
   wire [`ADDR_WID] if_to_mc_pc;
   wire mc_to_if_done;
-  wire [`DATA_WID] mc_to_if_data;
+  wire [`IF_DATA_WID] mc_to_if_data;
   // Load Store Buffer <-> Memory Controller
   wire lsb_to_mc_en;
   wire lsb_to_mc_wr;
@@ -95,21 +95,23 @@ module cpu (
   );
 
   IFetch u_IFetch (
-      .clk          (clk_in),
-      .rst          (rst_in),
-      .rdy          (rdy_in),
-      .inst_rdy     (if_to_dec_inst_rdy),
-      .inst         (if_to_dec_inst),
-      .mc_en        (if_to_mc_en),
-      .mc_pc        (if_to_mc_pc),
-      .mc_done      (mc_to_if_done),
-      .mc_data      (mc_to_if_data),
-      .rob_set_pc_en(rob_to_if_set_pc_en),
-      .rob_set_pc   (rob_to_if_set_pc)
+      .clk           (clk_in),
+      .rst           (rst_in),
+      .rdy           (rdy_in),
+      .inst_rdy      (if_to_dec_inst_rdy),
+      .inst          (if_to_dec_inst),
+      .inst_pc       (if_to_dec_inst_pc),
+      .inst_pred_jump(if_to_dec_inst_pred_jump),
+      .mc_en         (if_to_mc_en),
+      .mc_pc         (if_to_mc_pc),
+      .mc_done       (mc_to_if_done),
+      .mc_data       (mc_to_if_data),
+      .rob_set_pc_en (rob_to_if_set_pc_en),
+      .rob_set_pc    (rob_to_if_set_pc)
   );
 
 
-  // issue instruction
+  // Decoder issues instruction
   wire                issue;
   wire [`ROB_POS_WID] issue_rob_pos;
   wire [ `OPCODE_WID] issue_opcode;
@@ -122,6 +124,8 @@ module cpu (
   wire [   `DATA_WID] issue_imm;
   wire [`REG_POS_WID] issue_rd;
   wire [   `ADDR_WID] issue_pc;
+  wire                issue_pred_jump;
+  wire                issue_is_ready;
 
   // Decoder query in Register File
   wire [`REG_POS_WID] dec_query_reg_rs1;
@@ -157,6 +161,7 @@ module cpu (
       .inst_rdy          (if_to_dec_inst_rdy),
       .inst              (if_to_dec_inst),
       .inst_pc           (if_to_dec_inst_pc),
+      .inst_pred_jump    (if_to_dec_inst_pred_jump),
       .issue             (issue),
       .rob_pos           (issue_rob_pos),
       .opcode            (issue_opcode),
@@ -169,6 +174,8 @@ module cpu (
       .imm               (issue_imm),
       .rd                (issue_rd),
       .pc                (issue_pc),
+      .pred_jump         (issue_pred_jump),
+      .is_ready          (issue_is_ready),
       .reg_rs1           (dec_query_reg_rs1),
       .reg_rs1_val       (dec_query_reg_rs1_val),
       .reg_rs1_rob_id    (dec_query_reg_rs1_rob_id),
@@ -339,6 +346,7 @@ module cpu (
       .issue_opcode      (issue_opcode),
       .issue_pc          (issue_pc),
       .issue_pred_jump   (issue_pred_jump),
+      .issue_is_ready    (issue_is_ready),
       .commit_rob_pos    (rob_commit_pos),
       .reg_write         (rob_to_reg_write),
       .reg_rd            (rob_to_reg_rd),
@@ -357,7 +365,8 @@ module cpu (
       .rs1_val           (dec_query_rob_rs1_val),
       .rs2_pos           (dec_query_rob_rs2_pos),
       .rs2_ready         (dec_query_rob_rs2_ready),
-      .rs2_val           (dec_query_rob_rs2_val)
+      .rs2_val           (dec_query_rob_rs2_val),
+      .nxt_rob_pos       (nxt_rob_pos)
   );
 
 

@@ -14,10 +14,10 @@ module MemCtrl (
     input wire io_buffer_full,  // 1 if uart buffer is full
 
     // instruction fetch
-    input  wire             if_en,
-    input  wire [`ADDR_WID] if_pc,
-    output reg              if_done,
-    output reg  [`DATA_WID] if_data,
+    input  wire                if_en,
+    input  wire [   `ADDR_WID] if_pc,
+    output reg                 if_done,
+    output wire  [`IF_DATA_WID] if_data,
 
     // Load Store Buffer
     input  wire             lsb_en,
@@ -31,8 +31,16 @@ module MemCtrl (
 
   localparam IDLE = 0, IF = 1, LOAD = 2, STORE = 3;
   reg [1:0] status;
-  reg [2:0] stage;
-  reg [2:0] len;
+  reg [`MEM_CTRL_LEN_WID] stage;
+  reg [`MEM_CTRL_LEN_WID] len;
+
+  reg [7:0] if_data_arr[`MEM_CTRL_IF_DATA_LEN-1:0];
+  genvar _i;
+  generate
+    for (_i = 0; _i < `MEM_CTRL_IF_DATA_LEN; _i = _i + 1) begin
+      assign if_data[_i*8+7:_i*8] = if_data_arr[_i];
+    end
+  endgenerate
 
   always @(posedge clk) begin
     if (rst) begin
@@ -61,12 +69,7 @@ module MemCtrl (
       mem_wr <= 0;
       case (status)
         IF: begin
-          case (stage)
-            3'h1: if_data[7:0] <= mem_din;
-            3'h2: if_data[15:8] <= mem_din;
-            3'h3: if_data[23:16] <= mem_din;
-            3'h4: if_data[31:24] <= mem_din;
-          endcase
+          if_data_arr[stage-1] <= mem_din;  // TODO: optimize?
           if (stage == len) begin
             if_done <= 1;
           end
@@ -95,18 +98,21 @@ module MemCtrl (
           end
         end
         IDLE: begin
-          if_done  <= 0;
-          lsb_done <= 0;
-          if (lsb_en) begin
-            status <= lsb_wr ? STORE : LOAD;
-            mem_a  <= lsb_pc;
-            stage  <= 3'h1;
-            len    <= lsb_len;
-          end else if (if_en) begin
-            status <= IF;
-            mem_a  <= if_pc;
-            stage  <= 3'h1;
-            len    <= 3'd4;
+          if (if_done || lsb_done) begin
+            if_done  <= 0;
+            lsb_done <= 0;
+          end else begin
+            if (lsb_en) begin
+              status <= lsb_wr ? STORE : LOAD;
+              mem_a  <= lsb_pc;
+              stage  <= 3'h0;
+              len    <= lsb_len;
+            end else if (if_en) begin
+              status <= IF;
+              mem_a  <= if_pc;
+              stage  <= 3'h0;
+              len    <= `MEM_CTRL_IF_DATA_LEN;
+            end
           end
         end
       endcase

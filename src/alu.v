@@ -90,6 +90,8 @@ module ALU (
           result_val <= pc + 4;
           result_pc  <= val1 + imm;
         end
+        `OPCODE_LUI:   result_val <= imm;
+        `OPCODE_AUIPC: result_val <= pc + imm;
       endcase
     end
   end

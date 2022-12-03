@@ -28,6 +28,11 @@ module RegFile (
   reg [`DATA_WID]   val   [`REG_SIZE-1:0];
   reg [`ROB_ID_WID] rob_id[`REG_SIZE-1:0]; // {flag, rob_id}; flag: 0=ready, 1=renamed
 
+`ifdef DEBUG
+  wire sp_val = val[2];
+  wire sp_rob_id = rob_id[2];
+`endif
+
   always @(*) begin
     if (commit && rs1 == commit_rd) begin
       rob_id1 = 5'b0;
