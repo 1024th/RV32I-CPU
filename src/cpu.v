@@ -310,7 +310,7 @@ module cpu (
       .rdy               (rdy_in),
       .rollback          (rollback),
       .lsb_nxt_full      (lsb_nxt_full),
-      .issue             (issue),
+      .issue             (dec_to_lsb_en),
       .issue_rob_pos     (issue_rob_pos),
       .issue_opcode      (issue_opcode),
       .issue_funct3      (issue_funct3),

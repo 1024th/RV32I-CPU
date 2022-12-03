@@ -74,7 +74,7 @@ module Decoder (
   assign rob_rs1_pos = reg_rs1_rob_id[`ROB_POS_WID];
   assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
 
-  always @(posedge clk) begin
+  always @(*) begin
     if (rst || !inst_rdy || rs_nxt_full || lsb_nxt_full || rollback) begin
       issue  <= 0;
       lsb_en <= 0;

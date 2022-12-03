@@ -91,7 +91,7 @@ module LSB (
     end
   end
 
-  localparam IDLE = 0, WAIT_MEM = 3;
+  localparam IDLE = 0, WAIT_MEM = 1;
   reg [1:0] status;
 
   always @(posedge clk) begin

@@ -74,7 +74,7 @@ module IFetch (
         inst <= data[pc_index][pc_bs];
         inst_pc <= pc;
         pc <= pred_pc;
-        inst_pred_jump <= 0;
+        inst_pred_jump <= pred_jump;
       end else begin
         inst_rdy <= 0;
       end
@@ -118,17 +118,21 @@ module IFetch (
 
   // Branch Predictor
   reg [`ADDR_WID] pred_pc;
+  reg pred_jump;
   wire [`INST_WID] get_inst = data[pc_index][pc_bs];
   always @(*) begin
+    pred_pc = pc + 4;
+    pred_jump = 0;
     case (get_inst[`OPCODE_RANGE])
       `OPCODE_JAL: begin
         pred_pc = pc + {{12{get_inst[31]}}, get_inst[19:12], get_inst[20], get_inst[30:21], 1'b0};
+        pred_jump = 1;
       end
       `OPCODE_BR: begin
-        pred_pc = pc + {{20{get_inst[31]}}, get_inst[7], get_inst[30:25], get_inst[11:8], 1'b0};
-      end
-      default: begin
-        pred_pc = pc + 4;
+        if (bht[bht_idx] >= 2'd2) begin
+          pred_pc = pc + {{20{get_inst[31]}}, get_inst[7], get_inst[30:25], get_inst[11:8], 1'b0};
+          pred_jump = 1;
+        end
       end
     endcase
   end
