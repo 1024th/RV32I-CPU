@@ -67,6 +67,9 @@ module cpu (
   // Reorder Buffer -> Instruction Fetcher
   wire rob_to_if_set_pc_en;
   wire [`ADDR_WID] rob_to_if_set_pc;
+  wire rob_to_if_br;
+  wire rob_to_if_br_jump;
+  wire [`ADDR_WID] rob_to_if_br_pc;
   // Instruction Fetcher -> Decoder
   wire if_to_dec_inst_rdy;
   wire [`INST_WID] if_to_dec_inst;
@@ -107,7 +110,10 @@ module cpu (
       .mc_done       (mc_to_if_done),
       .mc_data       (mc_to_if_data),
       .rob_set_pc_en (rob_to_if_set_pc_en),
-      .rob_set_pc    (rob_to_if_set_pc)
+      .rob_set_pc    (rob_to_if_set_pc),
+      .rob_br        (rob_to_if_br),
+      .rob_br_jump   (rob_to_if_br_jump),
+      .rob_br_pc     (rob_to_if_br_pc)
   );
 
 
@@ -352,6 +358,9 @@ module cpu (
       .reg_rd            (rob_to_reg_rd),
       .reg_val           (rob_to_reg_val),
       .lsb_store         (rob_to_lsb_commit_store),
+      .commit_br         (rob_to_if_br),
+      .commit_br_jump    (rob_to_if_br_jump),
+      .commit_br_pc      (rob_to_if_br_pc),
       .alu_result        (alu_result),
       .alu_result_rob_pos(alu_result_rob_pos),
       .alu_result_val    (alu_result_val),

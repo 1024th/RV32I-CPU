@@ -30,6 +30,10 @@ module ROB (
     output reg [   `DATA_WID] reg_val,
     // commit store to Load Store Buffer
     output reg                lsb_store,
+    // update predictor
+    output reg                commit_br,
+    output reg                commit_br_jump,
+    output reg [   `ADDR_WID] commit_br_pc,
 
     // handle the broadcast
     // from Reservation Station
@@ -58,7 +62,8 @@ module ROB (
   reg [   `DATA_WID] val      [`ROB_SIZE-1:0];
   reg [   `ADDR_WID] pc       [`ROB_SIZE-1:0];
   reg [ `OPCODE_WID] opcode   [`ROB_SIZE-1:0];
-  reg                pred_jump[`ROB_SIZE-1:0];  // predict result, 1=jump
+  reg                pred_jump[`ROB_SIZE-1:0];  // predict whether to jump, 1=jump
+  reg                res_jump [`ROB_SIZE-1:0];  // execution result
 
   reg [`ROB_POS_WID] head, tail;
   reg empty;
@@ -112,11 +117,7 @@ module ROB (
       if (alu_result) begin
         val[alu_result_rob_pos]   <= alu_result_val;
         ready[alu_result_rob_pos] <= 1;
-        if (pred_jump[alu_result_rob_pos] != alu_result_jump) begin
-          rollback <= 1;
-          if_set_pc_en <= 1;
-          if_set_pc <= alu_result_pc;
-        end
+        res_jump[alu_result_rob_pos] <= alu_result_jump;
       end
       if (lsb_result) begin
         val[lsb_result_rob_pos]   <= lsb_result_val;
@@ -133,6 +134,16 @@ module ROB (
           reg_write <= 1;
           reg_rd    <= rd[head];
           reg_val   <= val[head];
+        end
+        commit_br <= 0;
+        if (opcode[head] == `OPCODE_BR) begin
+          commit_br <= 1;
+          commit_br_jump <= res_jump[head];
+          if (pred_jump[head] != res_jump[head]) begin
+            rollback <= 1;
+            if_set_pc_en <= 1;
+            if_set_pc <= alu_result_pc;
+          end
         end
         head <= head + 1'b1;
       end

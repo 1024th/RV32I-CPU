@@ -20,7 +20,11 @@ module IFetch (
 
     // from Reorder Buffer, set pc
     input wire             rob_set_pc_en,
-    input wire [`ADDR_WID] rob_set_pc
+    input wire [`ADDR_WID] rob_set_pc,
+    // from Reorder Buffer, update Branch Predictor
+    input wire             rob_br,
+    input wire             rob_br_jump,
+    input wire [`ADDR_WID] rob_br_pc
 );
 
   localparam IDLE = 0, WAIT_MEM = 1;
@@ -33,7 +37,7 @@ module IFetch (
 
   wire [`ICACHE_BS_WID] pc_bs = pc[`ICACHE_BS_RANGE];
   wire [`ICACHE_IDX_WID] pc_index = pc[`ICACHE_IDX_RANGE];
-  wire pc_tag = pc[`ICACHE_TAG_RANGE];
+  wire [`ICACHE_TAG_WID] pc_tag = pc[`ICACHE_TAG_RANGE];
   wire hit = valid[pc_index] && (tag[pc_index] == pc_tag);
   wire [`ICACHE_IDX_WID] mc_pc_index = mc_pc[`ICACHE_IDX_RANGE];
   wire mc_pc_tag = mc_pc[`ICACHE_TAG_RANGE];
@@ -69,7 +73,7 @@ module IFetch (
         inst_rdy <= 1;
         inst <= data[pc_index][pc_bs];
         inst_pc <= pc;
-        pc <= pc + 32'h4;  // TODO: predict
+        pc <= pred_pc;
         inst_pred_jump <= 0;
       end else begin
         inst_rdy <= 0;
@@ -90,6 +94,43 @@ module IFetch (
         end
       end
     end
+  end
+
+  // Branch History Table
+  `define BHT_SIZE 256
+  `define BHT_IDX_RANGE 9:2
+  `define BHT_IDX_WID 7:0
+  reg [1:0] bht[`BHT_SIZE-1:0];
+  wire [`BHT_IDX_WID] bht_idx = rob_br_pc[`BHT_IDX_RANGE];
+  always @(posedge clk) begin
+    if (rst) begin
+      for (i = 0; i < `BHT_SIZE; i++) bht[i] <= 0;
+    end else if (rdy) begin
+      if (rob_br) begin
+        if (rob_br_jump) begin
+          if (bht[bht_idx] < 2'd3) bht[bht_idx] <= bht[bht_idx] + 1;
+        end else begin
+          if (bht[bht_idx] > 2'd0) bht[bht_idx] <= bht[bht_idx] - 1;
+        end
+      end
+    end
+  end
+
+  // Branch Predictor
+  reg [`ADDR_WID] pred_pc;
+  wire [`INST_WID] get_inst = data[pc_index][pc_bs];
+  always @(*) begin
+    case (get_inst[`OPCODE_RANGE])
+      `OPCODE_JAL: begin
+        pred_pc = pc + {{12{get_inst[31]}}, get_inst[19:12], get_inst[20], get_inst[30:21], 1'b0};
+      end
+      `OPCODE_BR: begin
+        pred_pc = pc + {{20{get_inst[31]}}, get_inst[7], get_inst[30:25], get_inst[11:8], 1'b0};
+      end
+      default: begin
+        pred_pc = pc + 4;
+      end
+    endcase
   end
 
 endmodule

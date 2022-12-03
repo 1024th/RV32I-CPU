@@ -29,8 +29,10 @@ module RegFile (
   reg [`ROB_ID_WID] rob_id[`REG_SIZE-1:0]; // {flag, rob_id}; flag: 0=ready, 1=renamed
 
 `ifdef DEBUG
-  wire sp_val = val[2];
-  wire sp_rob_id = rob_id[2];
+  wire [`DATA_WID] sp_val = val[2];
+  wire [`ROB_ID_WID] sp_rob_id = rob_id[2];
+  wire [`DATA_WID] ra_val = val[1];
+  wire [`ROB_ID_WID] ra_rob_id = rob_id[1];
 `endif
 
   always @(*) begin
