@@ -40,7 +40,7 @@ module IFetch (
   wire [`ICACHE_TAG_WID] pc_tag = pc[`ICACHE_TAG_RANGE];
   wire hit = valid[pc_index] && (tag[pc_index] == pc_tag);
   wire [`ICACHE_IDX_WID] mc_pc_index = mc_pc[`ICACHE_IDX_RANGE];
-  wire mc_pc_tag = mc_pc[`ICACHE_TAG_RANGE];
+  wire [`ICACHE_TAG_WID] mc_pc_tag = mc_pc[`ICACHE_TAG_RANGE];
 
   wire [`INST_WID] receive_data[`ICACHE_BLK_SIZE-1:0];
   genvar _i;

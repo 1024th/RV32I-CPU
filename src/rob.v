@@ -20,7 +20,6 @@ module ROB (
     input wire [   `ADDR_WID] issue_pc,
     input wire                issue_pred_jump,
     input wire                issue_is_ready,
-    input wire [   `DATA_WID] issue_rd_val,
 
     // commit
     output reg [`ROB_POS_WID] commit_rob_pos,

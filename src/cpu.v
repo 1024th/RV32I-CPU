@@ -45,6 +45,7 @@ module cpu (
   wire [`ROB_POS_WID] alu_result_rob_pos;
   wire [`DATA_WID] alu_result_val;
   wire [`ADDR_WID] alu_result_pc;
+  wire             alu_result_jump;
   // Load Store Buffer broadcast
   wire lsb_result;
   wire [`ROB_POS_WID] lsb_result_rob_pos;
@@ -74,6 +75,7 @@ module cpu (
   wire if_to_dec_inst_rdy;
   wire [`INST_WID] if_to_dec_inst;
   wire [`ADDR_WID] if_to_dec_inst_pc;
+  wire             if_to_dec_inst_pred_jump;
 
   MemCtrl u_MemCtrl (
       .clk           (clk_in),
@@ -159,6 +161,14 @@ module cpu (
   // Reorder Buffer
   wire                rob_nxt_full;
   wire [`ROB_POS_WID] nxt_rob_pos;
+
+  // commit
+  wire [`ROB_POS_WID] rob_commit_pos;
+  // write to Register
+  wire                rob_to_reg_write;
+  wire [`REG_POS_WID] rob_to_reg_rd;
+  wire [   `DATA_WID] rob_to_reg_val;
+
   Decoder u_Decoder (
       .clk               (clk_in),
       .rst               (rst_in),
@@ -331,13 +341,6 @@ module cpu (
       .commit_store      (rob_to_lsb_commit_store),
       .commit_rob_pos    (rob_commit_pos)
   );
-
-  // commit
-  wire [`ROB_POS_WID] rob_commit_pos;
-  // write to Register
-  wire                rob_to_reg_write;
-  wire [`REG_POS_WID] rob_to_reg_rd;
-  wire [   `DATA_WID] rob_to_reg_val;
 
   ROB u_ROB (
       .clk               (clk_in),
