@@ -69,7 +69,7 @@ module ROB (
   wire commit = !empty && ready[head];
   wire [`ROB_POS_WID] nxt_head = head + commit;
   wire [`ROB_POS_WID] nxt_tail = tail + issue;
-  assign nxt_rob_pos  = nxt_tail;
+  assign nxt_rob_pos  = tail;
   // TODO: check
   assign rob_nxt_full = (nxt_head == nxt_tail && !empty);
   wire nxt_empty = (nxt_head == nxt_tail && (empty || !issue));
@@ -138,6 +138,13 @@ module ROB (
         if (opcode[head] == `OPCODE_BR) begin
           commit_br <= 1;
           commit_br_jump <= res_jump[head];
+          if (pred_jump[head] != res_jump[head]) begin
+            rollback <= 1;
+            if_set_pc_en <= 1;
+            if_set_pc <= alu_result_pc;
+          end
+        end
+        if (opcode[head] == `OPCODE_JALR) begin
           if (pred_jump[head] != res_jump[head]) begin
             rollback <= 1;
             if_set_pc_en <= 1;

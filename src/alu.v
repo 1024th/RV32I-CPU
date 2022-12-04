@@ -73,6 +73,7 @@ module ALU (
       if (alu_en) begin
         result <= 1;
         result_rob_pos <= rob_pos;
+        result_jump <= 0;
         case (opcode)
           `OPCODE_ARITH, `OPCODE_ARITHI: result_val <= arith_res;
           `OPCODE_BR:
@@ -80,14 +81,15 @@ module ALU (
             result_jump <= 1;
             result_pc   <= pc + imm;
           end else begin
-            result_jump <= 0;
             result_pc   <= pc + 4;
           end
           `OPCODE_JAL: begin
+            result_jump <= 1;
             result_val <= pc + 4;
             result_pc  <= pc + imm;
           end
           `OPCODE_JALR: begin
+            result_jump <= 1;
             result_val <= pc + 4;
             result_pc  <= val1 + imm;
           end

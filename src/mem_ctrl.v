@@ -17,7 +17,7 @@ module MemCtrl (
     input  wire                if_en,
     input  wire [   `ADDR_WID] if_pc,
     output reg                 if_done,
-    output wire  [`IF_DATA_WID] if_data,
+    output wire [`IF_DATA_WID] if_data,
 
     // Load Store Buffer
     input  wire             lsb_en,
@@ -33,6 +33,8 @@ module MemCtrl (
   reg [1:0] status;
   reg [`MEM_CTRL_LEN_WID] stage;
   reg [`MEM_CTRL_LEN_WID] len;
+
+  reg [`ADDR_WID] store_pc;
 
   reg [7:0] if_data_arr[`MEM_CTRL_IF_DATA_LEN-1:0];
   genvar _i;
@@ -62,7 +64,6 @@ module MemCtrl (
           mem_wr <= 0;
           mem_a  <= 0;
         end else begin
-          mem_a <= mem_a + 1;
           stage <= stage + 1;
         end
       end
@@ -70,6 +71,7 @@ module MemCtrl (
       case (status)
         IF: begin
           if_data_arr[stage-1] <= mem_din;  // TODO: optimize?
+          mem_a <= mem_a + 1;
           if (stage == len) begin
             if_done <= 1;
           end
@@ -81,6 +83,7 @@ module MemCtrl (
             3'h3: lsb_r_data[23:16] <= mem_din;
             3'h4: lsb_r_data[31:24] <= mem_din;
           endcase
+          mem_a <= mem_a + 1;
           if (stage == len) begin
             lsb_done <= 1;
           end
@@ -89,12 +92,14 @@ module MemCtrl (
           if (mem_a[17:16] != 2'b11 || !io_buffer_full) begin
             mem_wr <= 1;
             case (stage)
-              3'h1: mem_dout <= lsb_w_data[7:0];
-              3'h2: mem_dout <= lsb_w_data[15:8];
-              3'h3: mem_dout <= lsb_w_data[23:16];
-              3'h4: mem_dout <= lsb_w_data[31:24];
+              3'h0: mem_dout <= lsb_w_data[7:0];
+              3'h1: mem_dout <= lsb_w_data[15:8];
+              3'h2: mem_dout <= lsb_w_data[23:16];
+              3'h3: mem_dout <= lsb_w_data[31:24];
             endcase
-            if (stage == len) lsb_done <= 1;
+            if (stage == 0) mem_a <= store_pc;
+            else mem_a <= mem_a + 1;
+            if (stage + 1 == len) lsb_done <= 1;
           end
         end
         IDLE: begin
@@ -103,10 +108,15 @@ module MemCtrl (
             lsb_done <= 0;
           end else begin
             if (lsb_en) begin
-              status <= lsb_wr ? STORE : LOAD;
-              mem_a  <= lsb_pc;
-              stage  <= 3'h0;
-              len    <= lsb_len;
+              if (lsb_wr) begin
+                status   <= STORE;
+                store_pc <= lsb_pc;
+              end else begin
+                status <= LOAD;
+                mem_a  <= lsb_pc;
+              end
+              stage <= 3'h0;
+              len   <= lsb_len;
             end else if (if_en) begin
               status <= IF;
               mem_a  <= if_pc;

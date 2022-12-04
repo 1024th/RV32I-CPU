@@ -62,11 +62,11 @@ module RegFile (
       end
     end else if (rdy) begin
       // 注意 issue 和 commit 同一个寄存器时: 先 commit 后 issue
-      if (commit) begin
+      if (commit && commit_rd != 0) begin
         val[commit_rd] <= commit_val;
         rob_id[commit_rd] <= 5'b0;
       end
-      if (issue) begin
+      if (issue && issue_rd != 0) begin
         rob_id[issue_rd] <= {1'b1, issue_rob_pos};
       end
     end

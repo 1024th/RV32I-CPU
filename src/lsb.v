@@ -100,7 +100,7 @@ module LSB (
       mc_en <= 0;
       head <= 0;
       tail <= 0;
-      last_commit_pos <= 0;
+      last_commit_pos <= `LSB_NPOS;
       empty <= 1;
       for (i = 0; i < `LSB_SIZE; i++) begin
         busy[i]       <= 0;
