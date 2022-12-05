@@ -6,6 +6,8 @@ module RegFile (
     input wire rst,
     input wire rdy,
 
+    input wire rollback,
+
     // query from Decoder, combinational
     input  wire [`REG_POS_WID] rs1,
     output reg  [   `DATA_WID] val1,
@@ -26,8 +28,8 @@ module RegFile (
     input wire [`ROB_POS_WID] commit_rob_pos
 );
 
-  reg [`DATA_WID]   val   [`REG_SIZE-1:0];
-  reg [`ROB_ID_WID] rob_id[`REG_SIZE-1:0]; // {flag, rob_id}; flag: 0=ready, 1=renamed
+  reg [`DATA_WID] val[`REG_SIZE-1:0];
+  reg [`ROB_ID_WID] rob_id[`REG_SIZE-1:0];  // {flag, rob_id}; flag: 0=ready, 1=renamed
 
   wire real_commit = commit && commit_rd != 0 && rob_id[commit_rd] == {1'b1, commit_rob_pos};
 
@@ -71,6 +73,10 @@ module RegFile (
       end
       if (issue && issue_rd != 0) begin
         rob_id[issue_rd] <= {1'b1, issue_rob_pos};
+      end
+
+      if (rollback) begin
+        for (i = 0; i < 32; i += 1) rob_id[i] <= 5'b0;
       end
     end
   end

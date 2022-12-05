@@ -222,6 +222,7 @@ module cpu (
       .clk           (clk_in),
       .rst           (rst_in),
       .rdy           (rdy_in),
+      .rollback      (rollback),
       .rs1           (dec_query_reg_rs1),
       .val1          (dec_query_reg_rs1_val),
       .rob_id1       (dec_query_reg_rs1_rob_id),
