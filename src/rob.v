@@ -63,6 +63,7 @@ module ROB (
   reg [ `OPCODE_WID] opcode   [`ROB_SIZE-1:0];
   reg                pred_jump[`ROB_SIZE-1:0];  // predict whether to jump, 1=jump
   reg                res_jump [`ROB_SIZE-1:0];  // execution result
+  reg [   `ADDR_WID] res_pc   [`ROB_SIZE-1:0];
 
   reg [`ROB_POS_WID] head, tail;
   reg empty;
@@ -71,8 +72,8 @@ module ROB (
   wire [`ROB_POS_WID] nxt_tail = tail + issue;
   assign nxt_rob_pos  = tail;
   // TODO: check
-  assign rob_nxt_full = (nxt_head == nxt_tail && !empty);
-  wire nxt_empty = (nxt_head == nxt_tail && (empty || !issue));
+  wire nxt_empty = (nxt_head == nxt_tail && (empty || commit && !issue));
+  assign rob_nxt_full = (nxt_head == nxt_tail && !nxt_empty);
 
   // handle the query from Decoder
   assign rs1_ready = ready[rs1_pos];
@@ -114,9 +115,15 @@ module ROB (
       end
       // update result
       if (alu_result) begin
-        val[alu_result_rob_pos]   <= alu_result_val;
+`ifdef DEBUG
+        $display("ALU -> ROB #%X", alu_result_rob_pos);
+        $display("  val:%X, jump:%X, PC:%X", alu_result_val, alu_result_jump, alu_result_pc);
+        if (pred_jump[alu_result_rob_pos] != alu_result_jump) $display("Predict Failed!");
+`endif
+        val[alu_result_rob_pos] <= alu_result_val;
         ready[alu_result_rob_pos] <= 1;
         res_jump[alu_result_rob_pos] <= alu_result_jump;
+        res_pc[alu_result_rob_pos] <= alu_result_pc;
       end
       if (lsb_result) begin
         val[lsb_result_rob_pos]   <= lsb_result_val;
@@ -126,10 +133,15 @@ module ROB (
       reg_write <= 0;
       lsb_store <= 0;
       if (commit) begin
+`ifdef DEBUG
+        $display("Commit ROB #%X", head);
+        $display("  opcode:%X, rd:%X, val:%X, rollback:%b", opcode[head], rd[head], val[head],
+                 pred_jump[head] != res_jump[head]);
+`endif
         commit_rob_pos <= head;
         if (opcode[head] == `OPCODE_S) begin
           lsb_store <= 1;
-        end else begin
+        end else if (opcode[head] != `OPCODE_BR) begin
           reg_write <= 1;
           reg_rd    <= rd[head];
           reg_val   <= val[head];
@@ -138,17 +150,18 @@ module ROB (
         if (opcode[head] == `OPCODE_BR) begin
           commit_br <= 1;
           commit_br_jump <= res_jump[head];
+          commit_br_pc <= pc[head];
           if (pred_jump[head] != res_jump[head]) begin
             rollback <= 1;
             if_set_pc_en <= 1;
-            if_set_pc <= alu_result_pc;
+            if_set_pc <= res_pc[head];
           end
         end
         if (opcode[head] == `OPCODE_JALR) begin
           if (pred_jump[head] != res_jump[head]) begin
             rollback <= 1;
             if_set_pc_en <= 1;
-            if_set_pc <= alu_result_pc;
+            if_set_pc <= res_pc[head];
           end
         end
         head <= head + 1'b1;

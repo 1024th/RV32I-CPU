@@ -47,17 +47,10 @@ module Decoder (
     input  wire                rob_rs2_ready,
     input  wire [   `DATA_WID] rob_rs2_val,
 
-    // Reservation Station
-    input  wire rs_nxt_full,
     output reg  rs_en,
-
-    // Load Store Buffer
-    input  wire lsb_nxt_full,
     output reg  lsb_en,
 
-    // Reorder Buffer
-    input  wire                rob_nxt_full,
-    input  wire [`ROB_POS_WID] nxt_rob_pos,
+    input wire [`ROB_POS_WID] nxt_rob_pos,
 
     // handle the broadcast
     // from Reservation Station
@@ -75,93 +68,97 @@ module Decoder (
   assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
 
   always @(*) begin
-    if (rst || !inst_rdy || rs_nxt_full || lsb_nxt_full || rollback) begin
-      issue  <= 0;
-      lsb_en <= 0;
-      rs_en  <= 0;
+    rs1_rob_id = 0;
+    if (reg_rs1_rob_id[4] == 0) begin
+      rs1_val = reg_rs1_val;
+    end else if (rob_rs1_ready) begin
+      rs1_val = rob_rs1_val;
+    end else if (alu_result && rob_rs1_pos == alu_result_rob_pos) begin
+      rs1_val = alu_result_val;
+    end else if (lsb_result && rob_rs1_pos == lsb_result_rob_pos) begin
+      rs1_val = lsb_result_val;
+    end else begin
+      rs1_val = 0;
+      rs1_rob_id = reg_rs1_rob_id;
+    end
+
+    rs2_rob_id = 0;
+    if (reg_rs2_rob_id[4] == 0) begin
+      rs2_val = reg_rs2_val;
+    end else if (rob_rs2_ready) begin
+      rs2_val = rob_rs2_val;
+    end else if (alu_result && rob_rs2_pos == alu_result_rob_pos) begin
+      rs2_val = alu_result_val;
+    end else if (lsb_result && rob_rs2_pos == lsb_result_rob_pos) begin
+      rs2_val = lsb_result_val;
+    end else begin
+      rs2_val = 0;
+      rs2_rob_id = reg_rs2_rob_id;
+    end
+  end
+
+  always @(*) begin
+    // $display("Dec");
+    if (rst || !inst_rdy || rollback) begin
+      issue  = 0;
+      lsb_en = 0;
+      rs_en  = 0;
     end else if (!rdy) begin
       ;
     end else begin
-      issue <= 1;
-      rob_pos <= nxt_rob_pos;
+      issue = 1;
+      rob_pos = nxt_rob_pos;
 
-      opcode <= inst[`OPCODE_RANGE];
-      funct3 <= inst[`FUNCT3_RANGE];
-      funct7 <= inst[30];
-      rd <= inst[`RD_RANGE];
-      pc <= inst_pc;
-      pred_jump <= inst_pred_jump;
+      opcode = inst[`OPCODE_RANGE];
+      funct3 = inst[`FUNCT3_RANGE];
+      funct7 = inst[30];
+      rd = inst[`RD_RANGE];
+      pc = inst_pc;
+      pred_jump = inst_pred_jump;
 
-      rs1_rob_id <= 0;
-      if (reg_rs1_rob_id[4] == 0) begin
-        rs1_val <= reg_rs1_val;
-      end else if (rob_rs1_ready) begin
-        rs1_val <= rob_rs1_val;
-      end else if (alu_result && rob_rs1_pos == alu_result_rob_pos) begin
-        rs1_val <= alu_result_val;
-      end else if (lsb_result && rob_rs1_pos == lsb_result_rob_pos) begin
-        rs1_val <= lsb_result_val;
-      end else begin
-        rs1_val <= 0;
-        rs1_rob_id <= reg_rs1_rob_id;
-      end
-
-      rs2_rob_id <= 0;
-      if (reg_rs2_rob_id[4] == 0) begin
-        rs2_val <= reg_rs2_val;
-      end else if (rob_rs2_ready) begin
-        rs2_val <= rob_rs2_val;
-      end else if (alu_result && rob_rs2_pos == alu_result_rob_pos) begin
-        rs2_val <= alu_result_val;
-      end else if (lsb_result && rob_rs2_pos == lsb_result_rob_pos) begin
-        rs2_val <= lsb_result_val;
-      end else begin
-        rs2_val <= 0;
-        rs2_rob_id <= reg_rs2_rob_id;
-      end
-
-      lsb_en <= 0;
-      rs_en <= 0;
-      is_ready <= 0;
+      lsb_en = 0;
+      rs_en = 0;
+      is_ready = 0;
       // mask unused rs1 rs2
       case (inst[`OPCODE_RANGE])
         `OPCODE_S: begin
-          is_ready <= 1;
-          lsb_en <= 1;
-          imm    <= {{21{inst[31]}}, inst[30:25], inst[11:7]};
+          lsb_en   = 1;
+          is_ready = 1;
+          imm      = {{21{inst[31]}}, inst[30:25], inst[11:7]};
         end
         `OPCODE_L: begin
-          rs2_rob_id <= 0;
-          rs2_val    <= 0;
-          lsb_en     <= 1;
-          imm        <= {{21{inst[31]}}, inst[30:20]};
+          lsb_en     = 1;
+          rs2_rob_id = 0;
+          rs2_val    = 0;
+          imm        = {{21{inst[31]}}, inst[30:20]};
         end
         `OPCODE_ARITHI, `OPCODE_JALR: begin
-          rs2_rob_id <= 0;
-          rs2_val    <= 0;
-          rs_en      <= 1;
-          imm        <= {{21{inst[31]}}, inst[30:20]};
+          rs_en      = 1;
+          rs2_rob_id = 0;
+          rs2_val    = 0;
+          imm        = {{21{inst[31]}}, inst[30:20]};
         end
-        `OPCODE_ARITH: rs_en <= 1;
+        `OPCODE_ARITH: rs_en = 1;
         `OPCODE_JAL: begin
-          rs_en <= 1;
-          rs1_rob_id <= 0;
-          rs1_val    <= 0;
-          rs2_rob_id <= 0;
-          rs2_val    <= 0;
-          imm        <= {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
+          rs_en      = 1;
+          rs1_rob_id = 0;
+          rs1_val    = 0;
+          rs2_rob_id = 0;
+          rs2_val    = 0;
+          imm        = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
         end
         `OPCODE_BR: begin
-          rs_en <= 1;
-          imm   <= {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
+          rs_en = 1;
+          rd    = 0;
+          imm   = {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
         end
         `OPCODE_LUI, `OPCODE_AUIPC: begin
-          rs_en <= 1;
-          rs1_rob_id <= 0;
-          rs1_val    <= 0;
-          rs2_rob_id <= 0;
-          rs2_val    <= 0;
-          imm        <= {inst[31:12], 12'b0};
+          rs_en      = 1;
+          rs1_rob_id = 0;
+          rs1_val    = 0;
+          rs2_rob_id = 0;
+          rs2_val    = 0;
+          imm        = {inst[31:12], 12'b0};
         end
       endcase
     end

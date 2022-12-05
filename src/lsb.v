@@ -9,7 +9,7 @@ module LSB (
 
     input wire rollback,
 
-    output reg lsb_nxt_full,
+    output wire lsb_nxt_full,
 
     // issue instruction
     input wire                issue,
@@ -79,17 +79,9 @@ module LSB (
   wire pop = status == WAIT_MEM && mc_done;
   wire [`LSB_POS_WID] nxt_head = head + pop;
   wire [`LSB_POS_WID] nxt_tail = tail + issue;
-  reg nxt_empty;
-  always @(*) begin
-    // TODO: check
-    if (nxt_head != nxt_tail) begin
-      nxt_empty <= 0;
-      lsb_nxt_full <= 0;
-    end else begin
-      nxt_empty = empty || !issue;
-      lsb_nxt_full = !empty;
-    end
-  end
+  // TODO: check
+  wire nxt_empty = (nxt_head == nxt_tail && (empty || pop && !issue));
+  assign lsb_nxt_full = (nxt_head == nxt_tail && !nxt_empty);
 
   localparam IDLE = 0, WAIT_MEM = 1;
   reg [1:0] status;

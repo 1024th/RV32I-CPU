@@ -6,6 +6,13 @@ module IFetch (
     input wire rst,
     input wire rdy,
 
+    // Reservation Station
+    input wire rs_nxt_full,
+    // Load Store Buffer
+    input wire lsb_nxt_full,
+    // Reorder Buffer
+    input wire rob_nxt_full,
+
     // to Instruction Decoder
     output reg             inst_rdy,
     output reg [`INST_WID] inst,
@@ -69,7 +76,7 @@ module IFetch (
       mc_en <= 0;
       status <= IDLE;
     end else begin
-      if (hit && data[pc_index][pc_bs] != 0) begin
+      if (hit && data[pc_index][pc_bs] != 0 && !rs_nxt_full && !lsb_nxt_full && !rob_nxt_full) begin
         inst_rdy <= 1;
         inst <= data[pc_index][pc_bs];
         inst_pc <= pc;
@@ -120,6 +127,7 @@ module IFetch (
   reg [`ADDR_WID] pred_pc;
   reg pred_jump;
   wire [`INST_WID] get_inst = data[pc_index][pc_bs];
+  wire [`BHT_IDX_WID] pc_bht_idx = pc[`BHT_IDX_RANGE];
   always @(*) begin
     pred_pc = pc + 4;
     pred_jump = 0;
@@ -129,7 +137,7 @@ module IFetch (
         pred_jump = 1;
       end
       `OPCODE_BR: begin
-        if (bht[bht_idx] >= 2'd2) begin
+        if (bht[pc_bht_idx] >= 2'd2) begin
           pred_pc = pc + {{20{get_inst[31]}}, get_inst[7], get_inst[30:25], get_inst[11:8], 1'b0};
           pred_jump = 1;
         end

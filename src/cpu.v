@@ -39,6 +39,9 @@ module cpu (
 
   // Reorder Buffer rollback
   wire                 rollback;
+  wire                 rs_nxt_full;
+  wire                 lsb_nxt_full;
+  wire                 rob_nxt_full;
 
   // Reservation Station ALU broadcast
   wire                 alu_result;
@@ -103,6 +106,9 @@ module cpu (
       .clk           (clk_in),
       .rst           (rst_in),
       .rdy           (rdy_in),
+      .rs_nxt_full   (rs_nxt_full),
+      .lsb_nxt_full  (lsb_nxt_full),
+      .rob_nxt_full  (rob_nxt_full),
       .inst_rdy      (if_to_dec_inst_rdy),
       .inst          (if_to_dec_inst),
       .inst_pc       (if_to_dec_inst_pc),
@@ -151,15 +157,10 @@ module cpu (
   wire [   `DATA_WID] dec_query_rob_rs2_val;
 
   // Reservation Station
-  wire                rs_nxt_full;
   wire                dec_to_rs_en;
-
   // Load Store Buffer
-  wire                lsb_nxt_full;
   wire                dec_to_lsb_en;
-
   // Reorder Buffer
-  wire                rob_nxt_full;
   wire [`ROB_POS_WID] nxt_rob_pos;
 
   // commit
@@ -206,11 +207,8 @@ module cpu (
       .rob_rs2_pos       (dec_query_rob_rs2_pos),
       .rob_rs2_ready     (dec_query_rob_rs2_ready),
       .rob_rs2_val       (dec_query_rob_rs2_val),
-      .rs_nxt_full       (rs_nxt_full),
       .rs_en             (dec_to_rs_en),
-      .lsb_nxt_full      (lsb_nxt_full),
       .lsb_en            (dec_to_lsb_en),
-      .rob_nxt_full      (rob_nxt_full),
       .nxt_rob_pos       (nxt_rob_pos),
       .alu_result        (alu_result),
       .alu_result_rob_pos(alu_result_rob_pos),
