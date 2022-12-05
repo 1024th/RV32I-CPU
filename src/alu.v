@@ -33,7 +33,7 @@ module ALU (
   always @(*) begin
     case (funct3)
       `FUNCT3_ADD:  // ADD or SUB
-      if (funct7)   arith_res = arith_op1 - arith_op2;
+      if (opcode == `OPCODE_ARITH && funct7)   arith_res = arith_op1 - arith_op2;
       else          arith_res = arith_op1 + arith_op2;
       `FUNCT3_XOR:  arith_res = arith_op1 ^ arith_op2;
       `FUNCT3_OR:   arith_res = arith_op1 | arith_op2;
