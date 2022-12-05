@@ -22,21 +22,24 @@ module RegFile (
     // ReorderBuffer commit
     input wire                commit,
     input wire [`REG_POS_WID] commit_rd,
-    input wire [   `DATA_WID] commit_val
+    input wire [   `DATA_WID] commit_val,
+    input wire [`ROB_POS_WID] commit_rob_pos
 );
 
   reg [`DATA_WID]   val   [`REG_SIZE-1:0];
   reg [`ROB_ID_WID] rob_id[`REG_SIZE-1:0]; // {flag, rob_id}; flag: 0=ready, 1=renamed
 
+  wire real_commit = commit && commit_rd != 0 && rob_id[commit_rd] == {1'b1, commit_rob_pos};
+
 `ifdef DEBUG
-  wire [`DATA_WID] sp_val = val[2];
+  wire [  `DATA_WID] sp_val = val[2];
   wire [`ROB_ID_WID] sp_rob_id = rob_id[2];
-  wire [`DATA_WID] ra_val = val[1];
+  wire [  `DATA_WID] ra_val = val[1];
   wire [`ROB_ID_WID] ra_rob_id = rob_id[1];
 `endif
 
   always @(*) begin
-    if (commit && rs1 == commit_rd) begin
+    if (real_commit && rs1 == commit_rd) begin
       rob_id1 = 5'b0;
       val1 = commit_val;
     end else begin
@@ -44,7 +47,7 @@ module RegFile (
       val1 = val[rs1];
     end
 
-    if (commit && rs2 == commit_rd) begin
+    if (real_commit && rs2 == commit_rd) begin
       rob_id2 = 5'b0;
       val2 = commit_val;
     end else begin
@@ -62,7 +65,7 @@ module RegFile (
       end
     end else if (rdy) begin
       // 注意 issue 和 commit 同一个寄存器时: 先 commit 后 issue
-      if (commit && commit_rd != 0) begin
+      if (real_commit) begin
         val[commit_rd] <= commit_val;
         rob_id[commit_rd] <= 5'b0;
       end

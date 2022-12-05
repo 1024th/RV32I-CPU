@@ -22,7 +22,7 @@ module MemCtrl (
     // Load Store Buffer
     input  wire             lsb_en,
     input  wire             lsb_wr,      // 1 = write
-    input  wire [`ADDR_WID] lsb_pc,
+    input  wire [`ADDR_WID] lsb_addr,
     input  wire [      2:0] lsb_len,
     input  wire [`DATA_WID] lsb_w_data,
     output reg              lsb_done,
@@ -57,16 +57,6 @@ module MemCtrl (
       mem_wr   <= 0;
       mem_a    <= 0;
     end else begin
-      if (status != IDLE) begin
-        if (stage == len) begin
-          stage  <= 3'h0;
-          status <= IDLE;
-          mem_wr <= 0;
-          mem_a  <= 0;
-        end else begin
-          stage <= stage + 1;
-        end
-      end
       mem_wr <= 0;
       case (status)
         IF: begin
@@ -74,6 +64,12 @@ module MemCtrl (
           mem_a <= mem_a + 1;
           if (stage == len) begin
             if_done <= 1;
+            mem_wr  <= 0;
+            mem_a   <= 0;
+            stage   <= 3'h0;
+            status  <= IDLE;
+          end else begin
+            stage <= stage + 1;
           end
         end
         LOAD: begin
@@ -86,6 +82,12 @@ module MemCtrl (
           mem_a <= mem_a + 1;
           if (stage == len) begin
             lsb_done <= 1;
+            mem_wr <= 0;
+            mem_a <= 0;
+            stage <= 3'h0;
+            status <= IDLE;
+          end else begin
+            stage <= stage + 1;
           end
         end
         STORE: begin
@@ -99,7 +101,15 @@ module MemCtrl (
             endcase
             if (stage == 0) mem_a <= store_pc;
             else mem_a <= mem_a + 1;
-            if (stage + 1 == len) lsb_done <= 1;
+            if (stage == len) begin
+              lsb_done <= 1;
+              mem_wr <= 0;
+              mem_a <= 0;
+              stage <= 3'h0;
+              status <= IDLE;
+            end else begin
+              stage <= stage + 1;
+            end
           end
         end
         IDLE: begin
@@ -110,10 +120,11 @@ module MemCtrl (
             if (lsb_en) begin
               if (lsb_wr) begin
                 status   <= STORE;
-                store_pc <= lsb_pc;
+                store_pc <= lsb_addr;
               end else begin
                 status <= LOAD;
-                mem_a  <= lsb_pc;
+                mem_a  <= lsb_addr;
+                lsb_r_data <= 0;
               end
               stage <= 3'h0;
               len   <= lsb_len;

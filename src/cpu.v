@@ -38,44 +38,44 @@ module cpu (
   // - 0x30004 write: indicates program stop (will output '\0' through uart tx)
 
   // Reorder Buffer rollback
-  wire rollback;
+  wire                 rollback;
 
   // Reservation Station ALU broadcast
-  wire alu_result;
-  wire [`ROB_POS_WID] alu_result_rob_pos;
-  wire [`DATA_WID] alu_result_val;
-  wire [`ADDR_WID] alu_result_pc;
-  wire             alu_result_jump;
+  wire                 alu_result;
+  wire [`ROB_POS_WID]  alu_result_rob_pos;
+  wire [   `DATA_WID]  alu_result_val;
+  wire [   `ADDR_WID]  alu_result_pc;
+  wire                 alu_result_jump;
   // Load Store Buffer broadcast
-  wire lsb_result;
-  wire [`ROB_POS_WID] lsb_result_rob_pos;
-  wire [`DATA_WID] lsb_result_val;
+  wire                 lsb_result;
+  wire [`ROB_POS_WID]  lsb_result_rob_pos;
+  wire [   `DATA_WID]  lsb_result_val;
 
   // Instruction Fetcher <-> Memory Controller
-  wire if_to_mc_en;
-  wire [`ADDR_WID] if_to_mc_pc;
-  wire mc_to_if_done;
-  wire [`IF_DATA_WID] mc_to_if_data;
+  wire                 if_to_mc_en;
+  wire [   `ADDR_WID]  if_to_mc_pc;
+  wire                 mc_to_if_done;
+  wire [`IF_DATA_WID]  mc_to_if_data;
   // Load Store Buffer <-> Memory Controller
-  wire lsb_to_mc_en;
-  wire lsb_to_mc_wr;
-  wire [`ADDR_WID] lsb_to_mc_pc;
-  wire [2:0] lsb_to_mc_len;
-  wire [`DATA_WID] lsb_to_mc_w_data;
-  wire mc_to_lsb_done;
-  wire [`DATA_WID] mc_to_lsb_r_data;
+  wire                 lsb_to_mc_en;
+  wire                 lsb_to_mc_wr;
+  wire [   `ADDR_WID]  lsb_to_mc_addr;
+  wire [         2:0 ] lsb_to_mc_len;
+  wire [   `DATA_WID]  lsb_to_mc_w_data;
+  wire                 mc_to_lsb_done;
+  wire [   `DATA_WID]  mc_to_lsb_r_data;
 
   // Reorder Buffer -> Instruction Fetcher
-  wire rob_to_if_set_pc_en;
-  wire [`ADDR_WID] rob_to_if_set_pc;
-  wire rob_to_if_br;
-  wire rob_to_if_br_jump;
-  wire [`ADDR_WID] rob_to_if_br_pc;
+  wire                 rob_to_if_set_pc_en;
+  wire [   `ADDR_WID]  rob_to_if_set_pc;
+  wire                 rob_to_if_br;
+  wire                 rob_to_if_br_jump;
+  wire [   `ADDR_WID]  rob_to_if_br_pc;
   // Instruction Fetcher -> Decoder
-  wire if_to_dec_inst_rdy;
-  wire [`INST_WID] if_to_dec_inst;
-  wire [`ADDR_WID] if_to_dec_inst_pc;
-  wire             if_to_dec_inst_pred_jump;
+  wire                 if_to_dec_inst_rdy;
+  wire [   `INST_WID]  if_to_dec_inst;
+  wire [   `ADDR_WID]  if_to_dec_inst_pc;
+  wire                 if_to_dec_inst_pred_jump;
 
   MemCtrl u_MemCtrl (
       .clk           (clk_in),
@@ -92,7 +92,7 @@ module cpu (
       .if_data       (mc_to_if_data),
       .lsb_en        (lsb_to_mc_en),
       .lsb_wr        (lsb_to_mc_wr),
-      .lsb_pc        (lsb_to_mc_pc),
+      .lsb_addr      (lsb_to_mc_addr),
       .lsb_len       (lsb_to_mc_len),
       .lsb_w_data    (lsb_to_mc_w_data),
       .lsb_done      (mc_to_lsb_done),
@@ -168,6 +168,8 @@ module cpu (
   wire                rob_to_reg_write;
   wire [`REG_POS_WID] rob_to_reg_rd;
   wire [   `DATA_WID] rob_to_reg_val;
+  // to Load Store Buffer
+  wire                rob_to_lsb_commit_store;
 
   Decoder u_Decoder (
       .clk               (clk_in),
@@ -219,21 +221,22 @@ module cpu (
   );
 
   RegFile u_RegFile (
-      .clk          (clk_in),
-      .rst          (rst_in),
-      .rdy          (rdy_in),
-      .rs1          (dec_query_reg_rs1),
-      .val1         (dec_query_reg_rs1_val),
-      .rob_id1      (dec_query_reg_rs1_rob_id),
-      .rs2          (dec_query_reg_rs2),
-      .val2         (dec_query_reg_rs2_val),
-      .rob_id2      (dec_query_reg_rs2_rob_id),
-      .issue        (issue),
-      .issue_rd     (issue_rd),
-      .issue_rob_pos(issue_rob_pos),
-      .commit       (rob_to_reg_write),
-      .commit_rd    (rob_to_reg_rd),
-      .commit_val   (rob_to_reg_val)
+      .clk           (clk_in),
+      .rst           (rst_in),
+      .rdy           (rdy_in),
+      .rs1           (dec_query_reg_rs1),
+      .val1          (dec_query_reg_rs1_val),
+      .rob_id1       (dec_query_reg_rs1_rob_id),
+      .rs2           (dec_query_reg_rs2),
+      .val2          (dec_query_reg_rs2_val),
+      .rob_id2       (dec_query_reg_rs2_rob_id),
+      .issue         (issue),
+      .issue_rd      (issue_rd),
+      .issue_rob_pos (issue_rob_pos),
+      .commit        (rob_to_reg_write),
+      .commit_rd     (rob_to_reg_rd),
+      .commit_val    (rob_to_reg_val),
+      .commit_rob_pos(rob_commit_pos)
   );
 
   // Reservation Station -> ALU
@@ -252,7 +255,7 @@ module cpu (
       .rdy               (rdy_in),
       .rollback          (rollback),
       .rs_nxt_full       (rs_nxt_full),
-      .issue             (issue),
+      .issue             (dec_to_rs_en),
       .issue_rob_pos     (issue_rob_pos),
       .issue_opcode      (issue_opcode),
       .issue_funct3      (issue_funct3),
@@ -301,9 +304,6 @@ module cpu (
       .result_pc     (alu_result_pc)
   );
 
-  // Reorder Buffer -> Load Store Buffer
-  wire rob_to_lsb_commit_store;
-  wire [`ROB_POS_WID] rob_to_lsb_commit_rob_pos;
   LSB u_LSB (
       .clk               (clk_in),
       .rst               (rst_in),
@@ -324,7 +324,7 @@ module cpu (
       .issue_pc          (issue_pc),
       .mc_en             (lsb_to_mc_en),
       .mc_wr             (lsb_to_mc_wr),
-      .mc_pc             (lsb_to_mc_pc),
+      .mc_addr           (lsb_to_mc_addr),
       .mc_len            (lsb_to_mc_len),
       .mc_w_data         (lsb_to_mc_w_data),
       .mc_done           (mc_to_lsb_done),

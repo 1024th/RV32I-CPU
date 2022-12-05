@@ -8,21 +8,21 @@ module RS (
 
     input wire rollback,
 
-    output reg                 rs_nxt_full,
+    output reg rs_nxt_full,
 
     // issue instruction
-    input  wire                issue,
-    input  wire [`ROB_POS_WID] issue_rob_pos,
-    input  wire [ `OPCODE_WID] issue_opcode,
-    input  wire [ `FUNCT3_WID] issue_funct3,
-    input  wire                issue_funct7,
-    input  wire [   `DATA_WID] issue_rs1_val,
-    input  wire [ `ROB_ID_WID] issue_rs1_rob_id,
-    input  wire [   `DATA_WID] issue_rs2_val,
-    input  wire [ `ROB_ID_WID] issue_rs2_rob_id,
-    input  wire [   `DATA_WID] issue_imm,
-    input  wire [`REG_POS_WID] issue_rd,
-    input  wire [   `ADDR_WID] issue_pc,
+    input wire                issue,
+    input wire [`ROB_POS_WID] issue_rob_pos,
+    input wire [ `OPCODE_WID] issue_opcode,
+    input wire [ `FUNCT3_WID] issue_funct3,
+    input wire                issue_funct7,
+    input wire [   `DATA_WID] issue_rs1_val,
+    input wire [ `ROB_ID_WID] issue_rs1_rob_id,
+    input wire [   `DATA_WID] issue_rs2_val,
+    input wire [ `ROB_ID_WID] issue_rs2_rob_id,
+    input wire [   `DATA_WID] issue_imm,
+    input wire [`REG_POS_WID] issue_rd,
+    input wire [   `ADDR_WID] issue_pc,
 
     // to ALU
     output reg                alu_en,

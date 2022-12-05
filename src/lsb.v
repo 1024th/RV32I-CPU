@@ -28,7 +28,7 @@ module LSB (
     // Memory Controller
     output reg              mc_en,
     output reg              mc_wr,      // 1 = write
-    output reg  [`ADDR_WID] mc_pc,
+    output reg  [`ADDR_WID] mc_addr,
     output reg  [      2:0] mc_len,
     output reg  [`DATA_WID] mc_w_data,
     input  wire             mc_done,
@@ -128,7 +128,6 @@ module LSB (
       ;
     end else begin
       // execute Load or Store
-      mc_en  <= 0;
       result <= 0;
       if (status == WAIT_MEM) begin
         if (mc_done) begin  // finish
@@ -141,11 +140,13 @@ module LSB (
           end
           if (last_commit_pos[`LSB_POS_WID] == head) last_commit_pos <= `LSB_NPOS;
           status <= IDLE;
+          mc_en <= 0;
         end
       end else begin  // status == IDLE
+        mc_en  <= 0;
         if (exec_head) begin
           mc_en <= 1;
-          mc_pc <= rs1_val[head] + imm[head];
+          mc_addr <= rs1_val[head] + imm[head];
           if (opcode[head] == `OPCODE_S) begin
             mc_w_data <= rs2_val[head];
             case (funct3[head])
