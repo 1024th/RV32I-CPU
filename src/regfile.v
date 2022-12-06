@@ -31,7 +31,8 @@ module RegFile (
   reg [`DATA_WID] val[`REG_SIZE-1:0];
   reg [`ROB_ID_WID] rob_id[`REG_SIZE-1:0];  // {flag, rob_id}; flag: 0=ready, 1=renamed
 
-  wire real_commit = commit && commit_rd != 0 && rob_id[commit_rd] == {1'b1, commit_rob_pos};
+  wire real_commit = commit && commit_rd != 0;
+  wire is_latest_commit = rob_id[commit_rd] == {1'b1, commit_rob_pos};
 
 `ifdef DEBUG
   wire [  `DATA_WID] sp_val = val[2];
@@ -41,7 +42,7 @@ module RegFile (
 `endif
 
   always @(*) begin
-    if (real_commit && rs1 == commit_rd) begin
+    if (real_commit && rs1 == commit_rd && is_latest_commit) begin
       rob_id1 = 5'b0;
       val1 = commit_val;
     end else begin
@@ -49,7 +50,7 @@ module RegFile (
       val1 = val[rs1];
     end
 
-    if (real_commit && rs2 == commit_rd) begin
+    if (real_commit && rs2 == commit_rd && is_latest_commit) begin
       rob_id2 = 5'b0;
       val2 = commit_val;
     end else begin
@@ -69,7 +70,7 @@ module RegFile (
       // 注意 issue 和 commit 同一个寄存器时: 先 commit 后 issue
       if (real_commit) begin
         val[commit_rd] <= commit_val;
-        rob_id[commit_rd] <= 5'b0;
+        if (is_latest_commit) rob_id[commit_rd] <= 5'b0;
       end
       if (issue && issue_rd != 0) begin
         rob_id[issue_rd] <= {1'b1, issue_rob_pos};
