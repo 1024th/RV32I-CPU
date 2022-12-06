@@ -124,6 +124,7 @@ module Decoder (
         `OPCODE_S: begin
           lsb_en   = 1;
           is_ready = 1;
+          rd       = 0;
           imm      = {{21{inst[31]}}, inst[30:25], inst[11:7]};
         end
         `OPCODE_L: begin
