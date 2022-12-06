@@ -100,6 +100,7 @@ module ROB (
       end
       reg_write <= 0;
       lsb_store <= 0;
+      commit_br <= 0;
     end else if (!rdy) begin
       ;
     end else begin
@@ -132,6 +133,7 @@ module ROB (
       // commit
       reg_write <= 0;
       lsb_store <= 0;
+      commit_br <= 0;
       if (commit) begin
 `ifdef DEBUG
         $display("Commit ROB #%X", head);
@@ -146,7 +148,6 @@ module ROB (
           reg_rd    <= rd[head];
           reg_val   <= val[head];
         end
-        commit_br <= 0;
         if (opcode[head] == `OPCODE_BR) begin
           commit_br <= 1;
           commit_br_jump <= res_jump[head];
