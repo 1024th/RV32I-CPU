@@ -53,7 +53,7 @@ module ALU (
       `FUNCT3_BEQ:  jump = (val1 == val2);
       `FUNCT3_BNE:  jump = (val1 != val2);
       `FUNCT3_BLT:  jump = ($signed(val1) < $signed(val2));
-      `FUNCT3_BGE:  jump = ($signed(val1) > $signed(val2));
+      `FUNCT3_BGE:  jump = ($signed(val1) >= $signed(val2));
       `FUNCT3_BLTU: jump = (val1 < val2);
       `FUNCT3_BGEU: jump = (val1 >= val2);
     endcase
