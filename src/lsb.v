@@ -75,7 +75,7 @@ module LSB (
   reg [`LSB_POS_WID] head, tail;
   reg [`LSB_ID_WID] last_commit_pos;
   reg empty;
-  wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (opcode[head] == `OPCODE_L || committed[head]);
+  wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (opcode[head] == `OPCODE_L && !rollback || committed[head]);
   wire pop = status == WAIT_MEM && mc_done;
   wire [`LSB_POS_WID] nxt_head = head + pop;
   wire [`LSB_POS_WID] nxt_tail = tail + issue;
@@ -115,6 +115,20 @@ module LSB (
         if (!committed[i]) begin
           busy[i] <= 0;
         end
+      end
+      if (status == WAIT_MEM && mc_done) begin  // finish
+        busy[head] <= 0;
+        committed[head] <= 0;
+        if (opcode[head] == `OPCODE_L) begin  // this should never happen
+          result <= 1;
+          result_val <= mc_r_data;
+          result_rob_pos <= rob_pos[head];
+        end
+        if (last_commit_pos[`LSB_POS_WID] == head) last_commit_pos <= `LSB_NPOS;
+        status <= IDLE;
+        mc_en <= 0;
+        head <= head + 1'b1;
+        if (head == last_commit_pos) empty <= 0;
       end
     end else if (!rdy) begin
       ;

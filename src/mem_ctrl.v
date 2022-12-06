@@ -61,7 +61,8 @@ module MemCtrl (
       case (status)
         IF: begin
           if_data_arr[stage-1] <= mem_din;  // TODO: optimize?
-          mem_a <= mem_a + 1;
+          if (stage + 1 == len) mem_a <= 0;
+          else mem_a <= mem_a + 1;
           if (stage == len) begin
             if_done <= 1;
             mem_wr  <= 0;
@@ -79,7 +80,8 @@ module MemCtrl (
             3'h3: lsb_r_data[23:16] <= mem_din;
             3'h4: lsb_r_data[31:24] <= mem_din;
           endcase
-          mem_a <= mem_a + 1;
+          if (stage + 1 == len) mem_a <= 0;
+          else mem_a <= mem_a + 1;
           if (stage == len) begin
             lsb_done <= 1;
             mem_wr <= 0;
@@ -123,7 +125,7 @@ module MemCtrl (
                 store_pc <= lsb_addr;
               end else begin
                 status <= LOAD;
-                mem_a  <= lsb_addr;
+                mem_a <= lsb_addr;
                 lsb_r_data <= 0;
               end
               stage <= 3'h0;
