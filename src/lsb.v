@@ -124,11 +124,13 @@ module LSB (
           result_val <= mc_r_data;
           result_rob_pos <= rob_pos[head];
         end
-        if (last_commit_pos[`LSB_POS_WID] == head) last_commit_pos <= `LSB_NPOS;
+        if (last_commit_pos[`LSB_POS_WID] == head) begin
+          last_commit_pos <= `LSB_NPOS;
+          empty <= 1;
+        end
         status <= IDLE;
         mc_en <= 0;
         head <= head + 1'b1;
-        if (head == last_commit_pos) empty <= 0;
       end
     end else if (!rdy) begin
       ;
