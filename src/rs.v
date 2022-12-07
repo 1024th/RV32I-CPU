@@ -93,6 +93,7 @@ module RS (
       for (i = 0; i < `RS_SIZE; i++) begin
         busy[i] <= 0;
       end
+      alu_en <= 0;
     end else if (!rdy) begin
       ;
     end else begin
