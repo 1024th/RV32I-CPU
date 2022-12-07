@@ -84,6 +84,7 @@ module cpu (
       .clk           (clk_in),
       .rst           (rst_in),
       .rdy           (rdy_in),
+      .rollback      (rollback),
       .mem_din       (mem_din),
       .mem_dout      (mem_dout),
       .mem_a         (mem_a),

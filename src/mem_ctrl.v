@@ -6,6 +6,8 @@ module MemCtrl (
     input wire rst,
     input wire rdy,
 
+    input wire rollback,
+
     input  wire [ 7:0] mem_din,   // data input bus
     output reg  [ 7:0] mem_dout,  // data output bus
     output reg  [31:0] mem_a,     // address bus (only 17:0 is used)
@@ -74,22 +76,30 @@ module MemCtrl (
           end
         end
         LOAD: begin
-          case (stage)
-            3'h1: lsb_r_data[7:0] <= mem_din;
-            3'h2: lsb_r_data[15:8] <= mem_din;
-            3'h3: lsb_r_data[23:16] <= mem_din;
-            3'h4: lsb_r_data[31:24] <= mem_din;
-          endcase
-          if (stage + 1 == len) mem_a <= 0;
-          else mem_a <= mem_a + 1;
-          if (stage == len) begin
-            lsb_done <= 1;
+          if (rollback) begin
+            lsb_done <= 0;
             mem_wr <= 0;
             mem_a <= 0;
             stage <= 3'h0;
             status <= IDLE;
           end else begin
-            stage <= stage + 1;
+            case (stage)
+              3'h1: lsb_r_data[7:0] <= mem_din;
+              3'h2: lsb_r_data[15:8] <= mem_din;
+              3'h3: lsb_r_data[23:16] <= mem_din;
+              3'h4: lsb_r_data[31:24] <= mem_din;
+            endcase
+            if (stage + 1 == len) mem_a <= 0;
+            else mem_a <= mem_a + 1;
+            if (stage == len) begin
+              lsb_done <= 1;
+              mem_wr <= 0;
+              mem_a <= 0;
+              stage <= 3'h0;
+              status <= IDLE;
+            end else begin
+              stage <= stage + 1;
+            end
           end
         end
         STORE: begin
