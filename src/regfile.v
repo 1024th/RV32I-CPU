@@ -71,6 +71,13 @@ module RegFile (
       if (real_commit) begin
         val[commit_rd] <= commit_val;
         if (is_latest_commit) rob_id[commit_rd] <= 5'b0;
+
+`ifdef DEBUG
+        $fdisplay(logfile, "Reg @%t", $realtime);
+        for (i = 0; i < 32; i += 8) begin
+          $fdisplay(logfile, "%6H %6H %6H %6H %6H %6H %6H %6H", val[i], val[i+1], val[i+2], val[i+3], val[i+4], val[i+5], val[i+6], val[i+7]);
+        end
+`endif
       end
       if (issue && issue_rd != 0) begin
         rob_id[issue_rd] <= {1'b1, issue_rob_pos};
@@ -81,5 +88,12 @@ module RegFile (
       end
     end
   end
+
+`ifdef DEBUG
+  integer logfile;
+  initial begin
+    logfile = $fopen("regfile.log", "w");
+  end
+`endif
 endmodule
 `endif  // REGFILE

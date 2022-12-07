@@ -117,9 +117,9 @@ module ROB (
       // update result
       if (alu_result) begin
 `ifdef DEBUG
-        $display("ALU -> ROB #%X", alu_result_rob_pos);
-        $display("  val:%X, jump:%X, PC:%X", alu_result_val, alu_result_jump, alu_result_pc);
-        if (pred_jump[alu_result_rob_pos] != alu_result_jump) $display("Predict Failed!");
+        // $display("ALU -> ROB #%X", alu_result_rob_pos);
+        // $display("  val:%X, jump:%X, PC:%X", alu_result_val, alu_result_jump, alu_result_pc);
+        // if (pred_jump[alu_result_rob_pos] != alu_result_jump) $display("Predict Failed!");
 `endif
         val[alu_result_rob_pos] <= alu_result_val;
         ready[alu_result_rob_pos] <= 1;
@@ -136,8 +136,9 @@ module ROB (
       commit_br <= 0;
       if (commit) begin
 `ifdef DEBUG
-        $display("Commit ROB #%X", head);
-        $display("  opcode:%X, rd:%X, val:%X, rollback:%b", opcode[head], rd[head], val[head],
+        $fdisplay(logfile, "Commit ROB #%X (%d) @%t", head, commit_cnt, $realtime);
+        commit_cnt++;
+        $fdisplay(logfile, "  pc:%X, rd:%X, val:%X, jump:%b, respc:%X, rollback:%b", pc[head], rd[head], val[head], res_jump[head], res_pc[head],
                  pred_jump[head] != res_jump[head]);
 `endif
         commit_rob_pos <= head;
@@ -159,7 +160,7 @@ module ROB (
           end
         end
         if (opcode[head] == `OPCODE_JALR) begin
-          if (pred_jump[head] != res_jump[head]) begin
+          if (pred_jump[head] != res_jump[head]) begin  // TODO: check
             rollback <= 1;
             if_set_pc_en <= 1;
             if_set_pc <= res_pc[head];
@@ -170,5 +171,13 @@ module ROB (
     end
   end
 
+`ifdef DEBUG
+  integer logfile;
+  integer commit_cnt;
+  initial begin
+    logfile = $fopen("rob.log","w");
+    commit_cnt = 0;
+  end
+`endif
 endmodule
 `endif  // REORDER_BUFFER

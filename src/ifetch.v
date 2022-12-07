@@ -57,6 +57,10 @@ module IFetch (
     end
   endgenerate
 
+`ifdef DEBUG
+  wire [`INST_WID] pc_inst_from_cache = data[pc_index][pc_bs];
+`endif
+
   integer i, j;
   always @(posedge clk) begin
     if (rst) begin
@@ -70,20 +74,23 @@ module IFetch (
       status   <= IDLE;
     end else if (!rdy) begin
       ;
-    end else if (rob_set_pc_en) begin
-      inst_rdy <= 0;
-      pc <= rob_set_pc;
-      mc_en <= 0;
-      status <= IDLE;
     end else begin
-      if (hit && data[pc_index][pc_bs] != 0 && !rs_nxt_full && !lsb_nxt_full && !rob_nxt_full) begin
-        inst_rdy <= 1;
-        inst <= data[pc_index][pc_bs];
-        inst_pc <= pc;
-        pc <= pred_pc;
-        inst_pred_jump <= pred_jump;
-      end else begin
+      if (rob_set_pc_en) begin
         inst_rdy <= 0;
+        pc <= rob_set_pc;
+        // Do not interrupt current read
+        // mc_en <= 0;
+        // status <= IDLE;
+      end else begin
+        if (hit && data[pc_index][pc_bs] != 0 && !rs_nxt_full && !lsb_nxt_full && !rob_nxt_full) begin
+          inst_rdy <= 1;
+          inst <= data[pc_index][pc_bs];
+          inst_pc <= pc;
+          pc <= pred_pc;
+          inst_pred_jump <= pred_jump;
+        end else begin
+          inst_rdy <= 0;
+        end
       end
       if (status == IDLE) begin
         if (!hit) begin
@@ -129,16 +136,16 @@ module IFetch (
   wire [`INST_WID] get_inst = data[pc_index][pc_bs];
   wire [`BHT_IDX_WID] pc_bht_idx = pc[`BHT_IDX_RANGE];
   always @(*) begin
-    pred_pc = pc + 4;
+    pred_pc   = pc + 4;
     pred_jump = 0;
     case (get_inst[`OPCODE_RANGE])
       `OPCODE_JAL: begin
-        pred_pc = pc + {{12{get_inst[31]}}, get_inst[19:12], get_inst[20], get_inst[30:21], 1'b0};
+        pred_pc   = pc + {{12{get_inst[31]}}, get_inst[19:12], get_inst[20], get_inst[30:21], 1'b0};
         pred_jump = 1;
       end
       `OPCODE_BR: begin
         if (bht[pc_bht_idx] >= 2'd2) begin
-          pred_pc = pc + {{20{get_inst[31]}}, get_inst[7], get_inst[30:25], get_inst[11:8], 1'b0};
+          pred_pc   = pc + {{20{get_inst[31]}}, get_inst[7], get_inst[30:25], get_inst[11:8], 1'b0};
           pred_jump = 1;
         end
       end

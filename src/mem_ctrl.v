@@ -128,7 +128,7 @@ module MemCtrl (
           if (if_done || lsb_done) begin
             if_done  <= 0;
             lsb_done <= 0;
-          end else begin
+          end else if (!rollback) begin
             if (lsb_en) begin
               if (lsb_wr) begin
                 status   <= STORE;

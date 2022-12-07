@@ -129,8 +129,8 @@ module LSB (
           empty <= 1;
         end
         status <= IDLE;
-        mc_en <= 0;
-        head <= head + 1'b1;
+        mc_en  <= 0;
+        head   <= head + 1'b1;
       end
     end else if (!rdy) begin
       ;
@@ -148,12 +148,17 @@ module LSB (
           end
           if (last_commit_pos[`LSB_POS_WID] == head) last_commit_pos <= `LSB_NPOS;
           status <= IDLE;
-          mc_en <= 0;
+          mc_en  <= 0;
         end
       end else begin  // status == IDLE
-        mc_en  <= 0;
+        mc_en <= 0;
         if (exec_head) begin
-          mc_en <= 1;
+`ifdef DEBUG
+          $fdisplay(logfile, "will Exec %s @%t", opcode[head] == `OPCODE_S ? "S" : "L", $realtime);
+          $fdisplay(logfile, "  addr:%X, w:%X, rob_pos:%X", rs1_val[head] + imm[head],
+                    rs2_val[head], rob_pos[head]);
+`endif
+          mc_en   <= 1;
           mc_addr <= rs1_val[head] + imm[head];
           if (opcode[head] == `OPCODE_S) begin
             mc_w_data <= rs2_val[head];
@@ -229,5 +234,11 @@ module LSB (
     end
   end
 
+`ifdef DEBUG
+  integer logfile;
+  initial begin
+    logfile = $fopen("lsb.log", "w");
+  end
+`endif
 endmodule
 `endif  // LOAD_STORE_BUFFER
