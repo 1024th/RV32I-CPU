@@ -16,13 +16,11 @@ module LSB (
     input wire [`ROB_POS_WID] issue_rob_pos,
     input wire [ `OPCODE_WID] issue_opcode,
     input wire [ `FUNCT3_WID] issue_funct3,
-    input wire                issue_funct7,
     input wire [   `DATA_WID] issue_rs1_val,
     input wire [ `ROB_ID_WID] issue_rs1_rob_id,
     input wire [   `DATA_WID] issue_rs2_val,
     input wire [ `ROB_ID_WID] issue_rs2_rob_id,
     input wire [   `DATA_WID] issue_imm,
-    input wire [`REG_POS_WID] issue_rd,
     input wire [   `ADDR_WID] issue_pc,
 
     // Memory Controller
@@ -62,7 +60,6 @@ module LSB (
   reg                busy      [`LSB_SIZE-1:0];
   reg [ `OPCODE_WID] opcode    [`LSB_SIZE-1:0];
   reg [ `FUNCT3_WID] funct3    [`LSB_SIZE-1:0];
-  reg                funct7    [`LSB_SIZE-1:0];
   reg [ `ROB_ID_WID] rs1_rob_id[`LSB_SIZE-1:0];
   reg [   `DATA_WID] rs1_val   [`LSB_SIZE-1:0];
   reg [ `ROB_ID_WID] rs2_rob_id[`LSB_SIZE-1:0];
@@ -75,6 +72,9 @@ module LSB (
   reg [`LSB_POS_WID] head, tail;
   reg [`LSB_ID_WID] last_commit_pos;
   reg empty;
+  localparam IDLE = 0, WAIT_MEM = 1;
+  reg [1:0] status;
+
   wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (opcode[head] == `OPCODE_L && !rollback || committed[head]);
   wire pop = status == WAIT_MEM && mc_done;
   wire [`LSB_POS_WID] nxt_head = head + pop;
@@ -82,9 +82,6 @@ module LSB (
   // TODO: check
   wire nxt_empty = (nxt_head == nxt_tail && (empty || pop && !issue));
   assign lsb_nxt_full = (nxt_head == nxt_tail && !nxt_empty);
-
-  localparam IDLE = 0, WAIT_MEM = 1;
-  reg [1:0] status;
 
   always @(posedge clk) begin
     if (rst || (rollback && last_commit_pos == `LSB_NPOS)) begin
@@ -94,11 +91,10 @@ module LSB (
       tail <= 0;
       last_commit_pos <= `LSB_NPOS;
       empty <= 1;
-      for (i = 0; i < `LSB_SIZE; i++) begin
+      for (i = 0; i < `LSB_SIZE; i = i + 1) begin
         busy[i]       <= 0;
         opcode[i]     <= 0;
         funct3[i]     <= 0;
-        funct7[i]     <= 0;
         rs1_rob_id[i] <= 0;
         rs1_val[i]    <= 0;
         rs2_rob_id[i] <= 0;
@@ -111,7 +107,7 @@ module LSB (
     end else if (rollback) begin
       // clear uncommitted Load/Store
       tail <= last_commit_pos + 1;
-      for (i = 0; i < `LSB_SIZE; i++) begin
+      for (i = 0; i < `LSB_SIZE; i = i + 1) begin
         if (!committed[i]) begin
           busy[i] <= 0;
         end
@@ -182,7 +178,7 @@ module LSB (
 
       // handle broadcast, update values
       if (alu_result)
-        for (i = 0; i < `LSB_SIZE; i++) begin
+        for (i = 0; i < `LSB_SIZE; i = i + 1) begin
           if (rs1_rob_id[i] == {1'b1, alu_result_rob_pos}) begin
             rs1_rob_id[i] <= 0;
             rs1_val[i] <= alu_result_val;
@@ -194,7 +190,7 @@ module LSB (
         end
 
       if (lsb_result)
-        for (i = 0; i < `LSB_SIZE; i++) begin
+        for (i = 0; i < `LSB_SIZE; i = i + 1) begin
           if (rs1_rob_id[i] == {1'b1, lsb_result_rob_pos}) begin
             rs1_rob_id[i] <= 0;
             rs1_val[i] <= lsb_result_val;
@@ -206,10 +202,10 @@ module LSB (
         end
       // ROB commits store
       if (commit_store) begin
-        for (i = 0; i < `LSB_SIZE; i++)
+        for (i = 0; i < `LSB_SIZE; i = i + 1)
           if (busy[i] && rob_pos[i] == commit_rob_pos && !committed[i]) begin
-            committed[i] = 1;
-            last_commit_pos <= {1'b0, i};
+            committed[i] <= 1;
+            last_commit_pos <= {1'b0, i[`LSB_POS_WID]};
           end
       end
 
@@ -218,7 +214,6 @@ module LSB (
         busy[tail]       <= 1;
         opcode[tail]     <= issue_opcode;
         funct3[tail]     <= issue_funct3;
-        funct7[tail]     <= issue_funct7;
         rs1_rob_id[tail] <= issue_rs1_rob_id;
         rs1_val[tail]    <= issue_rs1_val;
         rs2_rob_id[tail] <= issue_rs2_rob_id;

@@ -68,36 +68,6 @@ module Decoder (
   assign rob_rs2_pos = reg_rs2_rob_id[`ROB_POS_WID];
 
   always @(*) begin
-    rs1_rob_id = 0;
-    if (reg_rs1_rob_id[4] == 0) begin
-      rs1_val = reg_rs1_val;
-    end else if (rob_rs1_ready) begin
-      rs1_val = rob_rs1_val;
-    end else if (alu_result && rob_rs1_pos == alu_result_rob_pos) begin
-      rs1_val = alu_result_val;
-    end else if (lsb_result && rob_rs1_pos == lsb_result_rob_pos) begin
-      rs1_val = lsb_result_val;
-    end else begin
-      rs1_val = 0;
-      rs1_rob_id = reg_rs1_rob_id;
-    end
-
-    rs2_rob_id = 0;
-    if (reg_rs2_rob_id[4] == 0) begin
-      rs2_val = reg_rs2_val;
-    end else if (rob_rs2_ready) begin
-      rs2_val = rob_rs2_val;
-    end else if (alu_result && rob_rs2_pos == alu_result_rob_pos) begin
-      rs2_val = alu_result_val;
-    end else if (lsb_result && rob_rs2_pos == lsb_result_rob_pos) begin
-      rs2_val = lsb_result_val;
-    end else begin
-      rs2_val = 0;
-      rs2_rob_id = reg_rs2_rob_id;
-    end
-  end
-
-  always @(*) begin
     // $display("Dec");
     if (rst || !inst_rdy || rollback) begin
       issue  = 0;
@@ -115,6 +85,34 @@ module Decoder (
       rd = inst[`RD_RANGE];
       pc = inst_pc;
       pred_jump = inst_pred_jump;
+
+      rs1_rob_id = 0;
+      if (reg_rs1_rob_id[4] == 0) begin
+        rs1_val = reg_rs1_val;
+      end else if (rob_rs1_ready) begin
+        rs1_val = rob_rs1_val;
+      end else if (alu_result && rob_rs1_pos == alu_result_rob_pos) begin
+        rs1_val = alu_result_val;
+      end else if (lsb_result && rob_rs1_pos == lsb_result_rob_pos) begin
+        rs1_val = lsb_result_val;
+      end else begin
+        rs1_val = 0;
+        rs1_rob_id = reg_rs1_rob_id;
+      end
+
+      rs2_rob_id = 0;
+      if (reg_rs2_rob_id[4] == 0) begin
+        rs2_val = reg_rs2_val;
+      end else if (rob_rs2_ready) begin
+        rs2_val = rob_rs2_val;
+      end else if (alu_result && rob_rs2_pos == alu_result_rob_pos) begin
+        rs2_val = alu_result_val;
+      end else if (lsb_result && rob_rs2_pos == lsb_result_rob_pos) begin
+        rs2_val = lsb_result_val;
+      end else begin
+        rs2_val = 0;
+        rs2_rob_id = reg_rs2_rob_id;
+      end
 
       lsb_en = 0;
       rs_en = 0;

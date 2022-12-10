@@ -42,6 +42,10 @@ module IFetch (
   reg [`ICACHE_TAG_WID] tag[`ICACHE_BLK_NUM-1:0];
   reg [`INST_WID] data[`ICACHE_BLK_NUM-1:0][`ICACHE_BLK_SIZE-1:0];
 
+  // Branch Predictor
+  reg [`ADDR_WID] pred_pc;
+  reg pred_jump;
+
   wire [`ICACHE_BS_WID] pc_bs = pc[`ICACHE_BS_RANGE];
   wire [`ICACHE_IDX_WID] pc_index = pc[`ICACHE_IDX_RANGE];
   wire [`ICACHE_TAG_WID] pc_tag = pc[`ICACHE_TAG_RANGE];
@@ -102,7 +106,7 @@ module IFetch (
         if (mc_done) begin
           valid[mc_pc_index] <= 1;
           tag[mc_pc_index]   <= mc_pc_tag;
-          for (i = 0; i < `ICACHE_BLK_SIZE; i++) data[mc_pc_index][i] <= receive_data[i];
+          for (i = 0; i < `ICACHE_BLK_SIZE; i = i + 1) data[mc_pc_index][i] <= receive_data[i];
           mc_en  <= 0;
           status <= IDLE;
         end
@@ -118,7 +122,7 @@ module IFetch (
   wire [`BHT_IDX_WID] bht_idx = rob_br_pc[`BHT_IDX_RANGE];
   always @(posedge clk) begin
     if (rst) begin
-      for (i = 0; i < `BHT_SIZE; i++) bht[i] <= 0;
+      for (i = 0; i < `BHT_SIZE; i = i + 1) bht[i] <= 0;
     end else if (rdy) begin
       if (rob_br) begin
         if (rob_br_jump) begin
@@ -131,8 +135,6 @@ module IFetch (
   end
 
   // Branch Predictor
-  reg [`ADDR_WID] pred_pc;
-  reg pred_jump;
   wire [`INST_WID] get_inst = data[pc_index][pc_bs];
   wire [`BHT_IDX_WID] pc_bht_idx = pc[`BHT_IDX_RANGE];
   always @(*) begin

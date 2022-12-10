@@ -62,7 +62,7 @@ module RegFile (
   integer i;
   always @(posedge clk) begin
     if (rst) begin
-      for (i = 0; i < 32; i += 1) begin
+      for (i = 0; i < 32; i = i + 1) begin
         val[i] <= 32'b0;
         rob_id[i] <= 5'b0;
       end
@@ -74,7 +74,7 @@ module RegFile (
 
 `ifdef DEBUG
         $fdisplay(logfile, "Reg @%t", $realtime);
-        for (i = 0; i < 32; i += 8) begin
+        for (i = 0; i < 32; i = i + 8) begin
           $fdisplay(logfile, "%6H %6H %6H %6H %6H %6H %6H %6H", val[i], val[i+1], val[i+2], val[i+3], val[i+4], val[i+5], val[i+6], val[i+7]);
         end
 `endif
@@ -84,7 +84,7 @@ module RegFile (
       end
 
       if (rollback) begin
-        for (i = 0; i < 32; i += 1) rob_id[i] <= 5'b0;
+        for (i = 0; i < 32; i = i + 1) rob_id[i] <= 5'b0;
       end
     end
   end

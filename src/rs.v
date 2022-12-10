@@ -67,15 +67,15 @@ module RS (
   reg [`RS_ID_WID] ready_pos, free_pos;
   always @(*) begin
     free_pos = `RS_NPOS;
-    for (i = 0; i < `RS_SIZE; i++) begin
+    for (i = 0; i < `RS_SIZE; i = i + 1) begin
       if (!busy[i]) free_pos = i;
     end
-    for (i = 0; i < `RS_SIZE; i++) begin
+    for (i = 0; i < `RS_SIZE; i = i + 1) begin
       if (busy[i] && rs1_rob_id[i][4] == 0 && rs2_rob_id[i][4] == 0) ready[i] = 1;
       else ready[i] = 0;
     end
     ready_pos = `RS_NPOS;
-    for (i = 0; i < `RS_SIZE; i++) begin
+    for (i = 0; i < `RS_SIZE; i = i + 1) begin
       if (ready[i]) ready_pos = i;
     end
   end
@@ -83,14 +83,14 @@ module RS (
   reg rs_nxt_full_helper[`RS_SIZE-1:0];
   always @(*) begin
     rs_nxt_full_helper[0] = busy[0];
-    for (i = 1; i < `RS_SIZE; i++)
+    for (i = 1; i < `RS_SIZE; i = i + 1)
       rs_nxt_full_helper[i] = (busy[i] || issue && i == free_pos) & rs_nxt_full_helper[i-1];
     rs_nxt_full = rs_nxt_full_helper[`RS_SIZE-1];
   end
 
   always @(posedge clk) begin
     if (rst || rollback) begin
-      for (i = 0; i < `RS_SIZE; i++) begin
+      for (i = 0; i < `RS_SIZE; i = i + 1) begin
         busy[i] <= 0;
       end
       alu_en <= 0;
@@ -113,7 +113,7 @@ module RS (
       end
       // handle broadcast, update values
       if (alu_result)
-        for (i = 0; i < `RS_SIZE; i++) begin
+        for (i = 0; i < `RS_SIZE; i = i + 1) begin
           if (rs1_rob_id[i] == {1'b1, alu_result_rob_pos}) begin
             rs1_rob_id[i] <= 0;
             rs1_val[i] <= alu_result_val;
@@ -125,7 +125,7 @@ module RS (
         end
 
       if (lsb_result)
-        for (i = 0; i < `RS_SIZE; i++) begin
+        for (i = 0; i < `RS_SIZE; i = i + 1) begin
           if (rs1_rob_id[i] == {1'b1, lsb_result_rob_pos}) begin
             rs1_rob_id[i] <= 0;
             rs1_val[i] <= lsb_result_val;

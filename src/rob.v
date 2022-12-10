@@ -90,7 +90,7 @@ module ROB (
       rollback <= 0;
       if_set_pc_en <= 0;
       if_set_pc <= 0;
-      for (i = 0; i < `ROB_SIZE; i += 1) begin
+      for (i = 0; i < `ROB_SIZE; i = i + 1) begin
         ready[i] <= 0;
         rd[i] <= 0;
         val[i] <= 0;
@@ -137,7 +137,7 @@ module ROB (
       if (commit) begin
 `ifdef DEBUG
         $fdisplay(logfile, "Commit ROB #%X (%d) @%t", head, commit_cnt, $realtime);
-        commit_cnt++;
+        commit_cnt <= commit_cnt + 1;
         $fdisplay(logfile, "  pc:%X, rd:%X, val:%X, jump:%b, respc:%X, rollback:%b", pc[head], rd[head], val[head], res_jump[head], res_pc[head],
                  pred_jump[head] != res_jump[head]);
 `endif
