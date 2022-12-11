@@ -69,22 +69,30 @@ module Decoder (
 
   always @(*) begin
     // $display("Dec");
-    if (rst || !inst_rdy || rollback) begin
-      issue  = 0;
-      lsb_en = 0;
-      rs_en  = 0;
-    end else if (!rdy) begin
+    opcode = inst[`OPCODE_RANGE];
+    funct3 = inst[`FUNCT3_RANGE];
+    funct7 = inst[30];
+    rd = inst[`RD_RANGE];
+    imm = 0;
+    pc = inst_pc;
+    pred_jump = inst_pred_jump;
+
+    rob_pos = nxt_rob_pos;
+
+    issue  = 0;
+    lsb_en = 0;
+    rs_en  = 0;
+    is_ready = 0;
+
+    rs1_val = 0;
+    rs1_rob_id = 0;
+    rs2_val = 0;
+    rs2_rob_id = 0;
+
+    if (rst || !inst_rdy || rollback || !rdy) begin
       ;
     end else begin
       issue = 1;
-      rob_pos = nxt_rob_pos;
-
-      opcode = inst[`OPCODE_RANGE];
-      funct3 = inst[`FUNCT3_RANGE];
-      funct7 = inst[30];
-      rd = inst[`RD_RANGE];
-      pc = inst_pc;
-      pred_jump = inst_pred_jump;
 
       rs1_rob_id = 0;
       if (reg_rs1_rob_id[4] == 0) begin
@@ -114,9 +122,6 @@ module Decoder (
         rs2_rob_id = reg_rs2_rob_id;
       end
 
-      lsb_en = 0;
-      rs_en = 0;
-      is_ready = 0;
       // mask unused rs1 rs2
       case (inst[`OPCODE_RANGE])
         `OPCODE_S: begin
