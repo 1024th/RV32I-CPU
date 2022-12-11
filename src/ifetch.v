@@ -40,7 +40,7 @@ module IFetch (
 
   reg valid[`ICACHE_BLK_NUM-1:0];
   reg [`ICACHE_TAG_WID] tag[`ICACHE_BLK_NUM-1:0];
-  reg [`INST_WID] data[`ICACHE_BLK_NUM-1:0][`ICACHE_BLK_SIZE-1:0];
+  reg [`ICACHE_BLK_WID] data[`ICACHE_BLK_NUM-1:0];
 
   // Branch Predictor
   reg [`ADDR_WID] pred_pc;
@@ -53,16 +53,19 @@ module IFetch (
   wire [`ICACHE_IDX_WID] mc_pc_index = mc_pc[`ICACHE_IDX_RANGE];
   wire [`ICACHE_TAG_WID] mc_pc_tag = mc_pc[`ICACHE_TAG_RANGE];
 
-  wire [`INST_WID] receive_data[`ICACHE_BLK_SIZE-1:0];
+  wire [`ICACHE_BLK_WID] cur_block_raw = data[pc_index];
+  wire [`INST_WID] cur_block[15:0];
+  wire [`INST_WID] get_inst = cur_block[pc_bs];
+
   genvar _i;
   generate
-    for (_i = 0; _i < `ICACHE_BLK_SIZE; _i = _i + 1) begin
-      assign receive_data[_i] = mc_data[_i*32+31:_i*32];
+    for (_i = 0; _i < `ICACHE_BLK_SIZE / `INST_SIZE; _i = _i + 1) begin
+      assign cur_block[_i] = cur_block_raw[_i*32+31:_i*32];
     end
   endgenerate
 
 `ifdef DEBUG
-  wire [`INST_WID] pc_inst_from_cache = data[pc_index][pc_bs];
+  // wire [`INST_WID] pc_inst_from_cache = data[pc_index][pc_bs];
 `endif
 
   integer i, j;
@@ -86,9 +89,9 @@ module IFetch (
         // mc_en <= 0;
         // status <= IDLE;
       end else begin
-        if (hit && data[pc_index][pc_bs] != 0 && !rs_nxt_full && !lsb_nxt_full && !rob_nxt_full) begin
+        if (hit && !rs_nxt_full && !lsb_nxt_full && !rob_nxt_full) begin
           inst_rdy <= 1;
-          inst <= data[pc_index][pc_bs];
+          inst <= get_inst;
           inst_pc <= pc;
           pc <= pred_pc;
           inst_pred_jump <= pred_jump;
@@ -106,7 +109,7 @@ module IFetch (
         if (mc_done) begin
           valid[mc_pc_index] <= 1;
           tag[mc_pc_index]   <= mc_pc_tag;
-          for (i = 0; i < `ICACHE_BLK_SIZE; i = i + 1) data[mc_pc_index][i] <= receive_data[i];
+          data[mc_pc_index]  <= mc_data;
           mc_en  <= 0;
           status <= IDLE;
         end
@@ -135,7 +138,6 @@ module IFetch (
   end
 
   // Branch Predictor
-  wire [`INST_WID] get_inst = data[pc_index][pc_bs];
   wire [`BHT_IDX_WID] pc_bht_idx = pc[`BHT_IDX_RANGE];
   always @(*) begin
     pred_pc   = pc + 4;
