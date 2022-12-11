@@ -174,7 +174,6 @@ module cpu (
   wire                rob_to_lsb_commit_store;
 
   Decoder u_Decoder (
-      .clk               (clk_in),
       .rst               (rst_in),
       .rdy               (rdy_in),
       .rollback          (rollback),
@@ -265,7 +264,6 @@ module cpu (
       .issue_rs2_val     (issue_rs2_val),
       .issue_rs2_rob_id  (issue_rs2_rob_id),
       .issue_imm         (issue_imm),
-      .issue_rd          (issue_rd),
       .issue_pc          (issue_pc),
       .alu_en            (rs_to_alu_en),
       .alu_opcode        (rs_to_alu_opcode),
@@ -319,7 +317,6 @@ module cpu (
       .issue_rs2_val     (issue_rs2_val),
       .issue_rs2_rob_id  (issue_rs2_rob_id),
       .issue_imm         (issue_imm),
-      .issue_pc          (issue_pc),
       .mc_en             (lsb_to_mc_en),
       .mc_wr             (lsb_to_mc_wr),
       .mc_addr           (lsb_to_mc_addr),

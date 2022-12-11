@@ -21,7 +21,6 @@ module LSB (
     input wire [   `DATA_WID] issue_rs2_val,
     input wire [ `ROB_ID_WID] issue_rs2_rob_id,
     input wire [   `DATA_WID] issue_imm,
-    input wire [   `ADDR_WID] issue_pc,
 
     // Memory Controller
     output reg              mc_en,
@@ -64,7 +63,6 @@ module LSB (
   reg [   `DATA_WID] rs1_val   [`LSB_SIZE-1:0];
   reg [ `ROB_ID_WID] rs2_rob_id[`LSB_SIZE-1:0];
   reg [   `DATA_WID] rs2_val   [`LSB_SIZE-1:0];
-  reg [   `ADDR_WID] pc        [`LSB_SIZE-1:0];
   reg [   `DATA_WID] imm       [`LSB_SIZE-1:0];
   reg [`ROB_POS_WID] rob_pos   [`LSB_SIZE-1:0];
   reg                committed [`LSB_SIZE-1:0];
@@ -99,7 +97,6 @@ module LSB (
         rs1_val[i]    <= 0;
         rs2_rob_id[i] <= 0;
         rs2_val[i]    <= 0;
-        pc[i]         <= 0;
         imm[i]        <= 0;
         rob_pos[i]    <= 0;
         committed[i]  <= 0;
@@ -218,7 +215,6 @@ module LSB (
         rs1_val[tail]    <= issue_rs1_val;
         rs2_rob_id[tail] <= issue_rs2_rob_id;
         rs2_val[tail]    <= issue_rs2_val;
-        pc[tail]         <= issue_pc;
         imm[tail]        <= issue_imm;
         rob_pos[tail]    <= issue_rob_pos;
       end

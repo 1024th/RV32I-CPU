@@ -21,7 +21,6 @@ module RS (
     input wire [   `DATA_WID] issue_rs2_val,
     input wire [ `ROB_ID_WID] issue_rs2_rob_id,
     input wire [   `DATA_WID] issue_imm,
-    input wire [`REG_POS_WID] issue_rd,
     input wire [   `ADDR_WID] issue_pc,
 
     // to ALU

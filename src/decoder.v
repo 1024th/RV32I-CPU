@@ -3,7 +3,7 @@
 `include "macros.v"
 
 module Decoder (
-    input wire clk,
+    // input wire clk,
     input wire rst,
     input wire rdy,
 
