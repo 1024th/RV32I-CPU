@@ -21,6 +21,11 @@ module ROB (
     input wire                issue_pred_jump,
     input wire                issue_is_ready,
 
+    // mark I/O instruction from LSB
+    input  wire                mark_io,
+    input  wire [`ROB_POS_WID] io_rob_pos,
+    output wire [ `ROB_ID_WID] head_io_rob_id,
+
     // commit
     output reg [`ROB_POS_WID] commit_rob_pos,
     // write to Register
@@ -57,6 +62,7 @@ module ROB (
 );
 
   reg                ready    [`ROB_SIZE-1:0];
+  reg                is_io    [`ROB_SIZE-1:0];
   reg [`REG_POS_WID] rd       [`ROB_SIZE-1:0];
   reg [   `DATA_WID] val      [`ROB_SIZE-1:0];
   reg [   `ADDR_WID] pc       [`ROB_SIZE-1:0];
@@ -70,16 +76,18 @@ module ROB (
   wire commit = !empty && ready[head];
   wire [`ROB_POS_WID] nxt_head = head + commit;
   wire [`ROB_POS_WID] nxt_tail = tail + issue;
-  assign nxt_rob_pos  = tail;
+  assign nxt_rob_pos = tail;
   // TODO: check
   wire nxt_empty = (nxt_head == nxt_tail && (empty || commit && !issue));
   assign rob_nxt_full = (nxt_head == nxt_tail && !nxt_empty);
 
+  assign head_io_rob_id = (!empty && is_io[head]) ? {1'b1, head} : 0;
+
   // handle the query from Decoder
   assign rs1_ready = ready[rs1_pos];
-  assign rs1_val   = val[rs1_pos];
+  assign rs1_val = val[rs1_pos];
   assign rs2_ready = ready[rs2_pos];
-  assign rs2_val   = val[rs2_pos];
+  assign rs2_val = val[rs2_pos];
 
   integer i;
   always @(posedge clk) begin
@@ -92,6 +100,7 @@ module ROB (
       if_set_pc <= 0;
       for (i = 0; i < `ROB_SIZE; i = i + 1) begin
         ready[i] <= 0;
+        is_io[i] <= 0;
         rd[i] <= 0;
         val[i] <= 0;
         pc[i] <= 0;
@@ -112,8 +121,10 @@ module ROB (
         pc[tail]        <= issue_pc;
         pred_jump[tail] <= issue_pred_jump;
         ready[tail]     <= issue_is_ready;
+        is_io[tail]     <= 0;
         tail            <= tail + 1'b1;
       end
+
       // update result
       if (alu_result) begin
 `ifdef DEBUG
@@ -130,6 +141,12 @@ module ROB (
         val[lsb_result_rob_pos]   <= lsb_result_val;
         ready[lsb_result_rob_pos] <= 1;
       end
+
+      // mark I/O instruction
+      if (mark_io) begin
+        is_io[io_rob_pos] <= 1;
+      end
+
       // commit
       reg_write <= 0;
       lsb_store <= 0;
@@ -138,8 +155,9 @@ module ROB (
 `ifdef DEBUG
         $fdisplay(logfile, "Commit ROB #%X (%d) @%t", head, commit_cnt, $realtime);
         commit_cnt <= commit_cnt + 1;
-        $fdisplay(logfile, "  pc:%X, rd:%X, val:%X, jump:%b, respc:%X, rollback:%b", pc[head], rd[head], val[head], res_jump[head], res_pc[head],
-                 pred_jump[head] != res_jump[head]);
+        $fdisplay(logfile, "  pc:%X, rd:%X, val:%X, jump:%b, respc:%X, rollback:%b", pc[head],
+                  rd[head], val[head], res_jump[head], res_pc[head],
+                  pred_jump[head] != res_jump[head]);
 `endif
         commit_rob_pos <= head;
         if (opcode[head] == `OPCODE_S) begin
@@ -175,7 +193,7 @@ module ROB (
   integer logfile;
   integer commit_cnt;
   initial begin
-    logfile = $fopen("rob.log","w");
+    logfile = $fopen("rob.log", "w");
     commit_cnt = 0;
   end
 `endif

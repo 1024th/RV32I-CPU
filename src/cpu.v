@@ -173,6 +173,10 @@ module cpu (
   // to Load Store Buffer
   wire                rob_to_lsb_commit_store;
 
+  wire                lsb_mark_io;
+  wire [`ROB_POS_WID] lsb_io_rob_pos;
+  wire [ `ROB_ID_WID] rob_head_io_rob_id;
+
   Decoder u_Decoder (
       .rst               (rst_in),
       .rdy               (rdy_in),
@@ -334,7 +338,10 @@ module cpu (
       .lsb_result_rob_pos(lsb_result_rob_pos),
       .lsb_result_val    (lsb_result_val),
       .commit_store      (rob_to_lsb_commit_store),
-      .commit_rob_pos    (rob_commit_pos)
+      .commit_rob_pos    (rob_commit_pos),
+      .mark_io           (lsb_mark_io),
+      .io_rob_pos        (lsb_io_rob_pos),
+      .head_io_rob_id    (rob_head_io_rob_id)
   );
 
   ROB u_ROB (
@@ -351,6 +358,9 @@ module cpu (
       .issue_pc          (issue_pc),
       .issue_pred_jump   (issue_pred_jump),
       .issue_is_ready    (issue_is_ready),
+      .mark_io           (lsb_mark_io),
+      .io_rob_pos        (lsb_io_rob_pos),
+      .head_io_rob_id    (rob_head_io_rob_id),
       .commit_rob_pos    (rob_commit_pos),
       .reg_write         (rob_to_reg_write),
       .reg_rd            (rob_to_reg_rd),
