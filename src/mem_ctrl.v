@@ -36,7 +36,7 @@ module MemCtrl (
   reg [`MEM_CTRL_LEN_WID] stage;
   reg [`MEM_CTRL_LEN_WID] len;
 
-  reg [`ADDR_WID] store_pc;
+  reg [`ADDR_WID] store_addr;
 
   reg [7:0] if_data_arr[`MEM_CTRL_IF_DATA_LEN-1:0];
   genvar _i;
@@ -69,7 +69,7 @@ module MemCtrl (
             if_done <= 1;
             mem_wr  <= 0;
             mem_a   <= 0;
-            stage   <= 3'h0;
+            stage   <= 0;
             status  <= IDLE;
           end else begin
             stage <= stage + 1;
@@ -80,14 +80,14 @@ module MemCtrl (
             lsb_done <= 0;
             mem_wr <= 0;
             mem_a <= 0;
-            stage <= 3'h0;
+            stage <= 0;
             status <= IDLE;
           end else begin
             case (stage)
-              3'h1: lsb_r_data[7:0] <= mem_din;
-              3'h2: lsb_r_data[15:8] <= mem_din;
-              3'h3: lsb_r_data[23:16] <= mem_din;
-              3'h4: lsb_r_data[31:24] <= mem_din;
+              1: lsb_r_data[7:0] <= mem_din;
+              2: lsb_r_data[15:8] <= mem_din;
+              3: lsb_r_data[23:16] <= mem_din;
+              4: lsb_r_data[31:24] <= mem_din;
             endcase
             if (stage + 1 == len) mem_a <= 0;
             else mem_a <= mem_a + 1;
@@ -95,7 +95,7 @@ module MemCtrl (
               lsb_done <= 1;
               mem_wr <= 0;
               mem_a <= 0;
-              stage <= 3'h0;
+              stage <= 0;
               status <= IDLE;
             end else begin
               stage <= stage + 1;
@@ -106,18 +106,18 @@ module MemCtrl (
           if (mem_a[17:16] != 2'b11 || !io_buffer_full) begin
             mem_wr <= 1;
             case (stage)
-              3'h0: mem_dout <= lsb_w_data[7:0];
-              3'h1: mem_dout <= lsb_w_data[15:8];
-              3'h2: mem_dout <= lsb_w_data[23:16];
-              3'h3: mem_dout <= lsb_w_data[31:24];
+              0: mem_dout <= lsb_w_data[7:0];
+              1: mem_dout <= lsb_w_data[15:8];
+              2: mem_dout <= lsb_w_data[23:16];
+              3: mem_dout <= lsb_w_data[31:24];
             endcase
-            if (stage == 0) mem_a <= store_pc;
+            if (stage == 0) mem_a <= store_addr;
             else mem_a <= mem_a + 1;
             if (stage == len) begin
               lsb_done <= 1;
               mem_wr <= 0;
               mem_a <= 0;
-              stage <= 3'h0;
+              stage <= 0;
               status <= IDLE;
             end else begin
               stage <= stage + 1;
@@ -131,19 +131,19 @@ module MemCtrl (
           end else if (!rollback) begin
             if (lsb_en) begin
               if (lsb_wr) begin
-                status   <= STORE;
-                store_pc <= lsb_addr;
+                status <= STORE;
+                store_addr <= lsb_addr;
               end else begin
                 status <= LOAD;
                 mem_a <= lsb_addr;
                 lsb_r_data <= 0;
               end
-              stage <= 3'h0;
-              len   <= lsb_len;
+              stage <= 0;
+              len   <= {4'b0, lsb_len};
             end else if (if_en) begin
               status <= IF;
               mem_a  <= if_pc;
-              stage  <= 3'h0;
+              stage  <= 0;
               len    <= `MEM_CTRL_IF_DATA_LEN;
             end
           end
