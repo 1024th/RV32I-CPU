@@ -136,7 +136,13 @@ module LSB (
           committed[head] <= 0;
           if (opcode[head] == `OPCODE_L) begin
             result <= 1;
-            result_val <= mc_r_data;
+            case (funct3[head])
+              `FUNCT3_LB:  result_val <= {{24{mc_r_data[7]}}, mc_r_data[7:0]};
+              `FUNCT3_LBU: result_val <= {24'b0, mc_r_data[7:0]};
+              `FUNCT3_LH:  result_val <= {{16{mc_r_data[15]}}, mc_r_data[15:0]};
+              `FUNCT3_LHU: result_val <= {16'b0, mc_r_data[15:0]};
+              `FUNCT3_LW:  result_val <= mc_r_data;
+            endcase
             result_rob_pos <= rob_pos[head];
           end
           if (last_commit_pos[`LSB_POS_WID] == head) last_commit_pos <= `LSB_NPOS;
