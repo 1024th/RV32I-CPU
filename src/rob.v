@@ -21,10 +21,8 @@ module ROB (
     input wire                issue_pred_jump,
     input wire                issue_is_ready,
 
-    // mark I/O instruction from LSB
-    input  wire                mark_io,
-    input  wire [`ROB_POS_WID] io_rob_pos,
-    output wire [ `ROB_ID_WID] head_io_rob_id,
+    // for LSB to check if I/O read can be done
+    output wire [`ROB_POS_WID] head_rob_pos,
 
     // commit
     output reg [`ROB_POS_WID] commit_rob_pos,
@@ -62,7 +60,6 @@ module ROB (
 );
 
   reg                ready    [`ROB_SIZE-1:0];
-  reg                is_io    [`ROB_SIZE-1:0];
   reg [`REG_POS_WID] rd       [`ROB_SIZE-1:0];
   reg [   `DATA_WID] val      [`ROB_SIZE-1:0];
   reg [   `ADDR_WID] pc       [`ROB_SIZE-1:0];
@@ -81,7 +78,7 @@ module ROB (
   wire nxt_empty = (nxt_head == nxt_tail && (empty || commit && !issue));
   assign rob_nxt_full = (nxt_head == nxt_tail && !nxt_empty);
 
-  assign head_io_rob_id = (!empty && is_io[head]) ? {1'b1, head} : 0;
+  assign head_rob_pos = head;
 
   // handle the query from Decoder
   assign rs1_ready = ready[rs1_pos];
@@ -100,12 +97,13 @@ module ROB (
       if_set_pc <= 0;
       for (i = 0; i < `ROB_SIZE; i = i + 1) begin
         ready[i] <= 0;
-        is_io[i] <= 0;
         rd[i] <= 0;
         val[i] <= 0;
         pc[i] <= 0;
         opcode[i] <= 0;
         pred_jump[i] <= 0;
+        res_jump[i] <= 0;
+        res_pc[i] <= 0;
       end
       reg_write <= 0;
       lsb_store <= 0;
@@ -121,7 +119,6 @@ module ROB (
         pc[tail]        <= issue_pc;
         pred_jump[tail] <= issue_pred_jump;
         ready[tail]     <= issue_is_ready;
-        is_io[tail]     <= 0;
         tail            <= tail + 1'b1;
       end
 
@@ -140,11 +137,6 @@ module ROB (
       if (lsb_result) begin
         val[lsb_result_rob_pos]   <= lsb_result_val;
         ready[lsb_result_rob_pos] <= 1;
-      end
-
-      // mark I/O instruction
-      if (mark_io) begin
-        is_io[io_rob_pos] <= 1;
       end
 
       // commit

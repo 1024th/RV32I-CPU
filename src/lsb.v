@@ -50,10 +50,8 @@ module LSB (
     input wire                commit_store,
     input wire [`ROB_POS_WID] commit_rob_pos,
 
-    // mark I/O instruction in Reorder Buffer
-    output reg                 mark_io,
-    output reg  [`ROB_POS_WID] io_rob_pos,
-    input  wire [ `ROB_ID_WID] head_io_rob_id
+    // check if I/O read can be done
+    input  wire [`ROB_POS_WID] head_rob_pos
 );
   integer i;
   `define LSB_SIZE 16
@@ -80,7 +78,7 @@ module LSB (
 
   wire [`ADDR_WID] head_addr = rs1_val[head] + imm[head];
   wire head_is_io = head_addr[17:16] == 2'b11;
-  wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (opcode[head] == `OPCODE_L && !rollback && (!head_is_io || {1'b1, rob_pos[head]} == head_io_rob_id) || committed[head]);
+  wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (opcode[head] == `OPCODE_L && !rollback && (!head_is_io || rob_pos[head] == head_rob_pos) || committed[head]);
   wire pop = status == WAIT_MEM && mc_done;
   wire [`LSB_POS_WID] nxt_head = head + pop;
   wire [`LSB_POS_WID] nxt_tail = tail + issue;
@@ -161,7 +159,7 @@ module LSB (
         if (exec_head) begin
 `ifdef DEBUG
           $fdisplay(logfile, "will Exec %s @%t", opcode[head] == `OPCODE_S ? "S" : "L", $realtime);
-          $fdisplay(logfile, "  addr:%X, w:%X, rob_pos:%X", head_addr[head], rs2_val[head],
+          $fdisplay(logfile, "  addr:%X, w:%X, rob_pos:%X", head_addr, rs2_val[head],
                     rob_pos[head]);
 `endif
           mc_en   <= 1;
@@ -184,14 +182,6 @@ module LSB (
           end
           status <= WAIT_MEM;
         end
-      end
-
-      // mark I/O instruction in Reorder Buffer
-      if (!empty && head_is_io) begin
-        mark_io <= 1;
-        io_rob_pos <= rob_pos[head];
-      end else begin
-        mark_io <= 0;
       end
 
       // handle broadcast, update values
