@@ -103,7 +103,7 @@ module MemCtrl (
           end
         end
         STORE: begin
-          if (mem_a[17:16] != 2'b11 || !io_buffer_full) begin
+          if (store_addr[17:16] != 2'b11 || !io_buffer_full) begin
             mem_wr <= 1;
             case (stage)
               0: mem_dout <= lsb_w_data[7:0];
