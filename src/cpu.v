@@ -37,7 +37,7 @@ module cpu (
   // - 0x30004 read: read clocks passed since cpu starts (in dword, 4 bytes)
   // - 0x30004 write: indicates program stop (will output '\0' through uart tx)
 
-  // Reorder Buffer rollback
+  // Reorder Buffer rollback signal
   wire                 rollback;
   wire                 rs_nxt_full;
   wire                 lsb_nxt_full;
@@ -130,6 +130,7 @@ module cpu (
   wire                issue;
   wire [`ROB_POS_WID] issue_rob_pos;
   wire [ `OPCODE_WID] issue_opcode;
+  wire                issue_is_store;
   wire [ `FUNCT3_WID] issue_funct3;
   wire                issue_funct7;
   wire [   `DATA_WID] issue_rs1_val;
@@ -156,12 +157,11 @@ module cpu (
   wire [`ROB_POS_WID] dec_query_rob_rs2_pos;
   wire                dec_query_rob_rs2_ready;
   wire [   `DATA_WID] dec_query_rob_rs2_val;
-
-  // Reservation Station
+  // send instruction to Reservation Station
   wire                dec_to_rs_en;
-  // Load Store Buffer
+  // send instruction to Load Store Buffer
   wire                dec_to_lsb_en;
-  // Reorder Buffer
+  // get next free position of Reorder Buffer
   wire [`ROB_POS_WID] nxt_rob_pos;
 
   // commit
@@ -186,6 +186,7 @@ module cpu (
       .issue             (issue),
       .rob_pos           (issue_rob_pos),
       .opcode            (issue_opcode),
+      .is_store          (issue_is_store),
       .funct3            (issue_funct3),
       .funct7            (issue_funct7),
       .rs1_val           (issue_rs1_val),
@@ -312,7 +313,7 @@ module cpu (
       .lsb_nxt_full      (lsb_nxt_full),
       .issue             (dec_to_lsb_en),
       .issue_rob_pos     (issue_rob_pos),
-      .issue_opcode      (issue_opcode),
+      .issue_is_store    (issue_is_store),
       .issue_funct3      (issue_funct3),
       .issue_rs1_val     (issue_rs1_val),
       .issue_rs1_rob_id  (issue_rs1_rob_id),

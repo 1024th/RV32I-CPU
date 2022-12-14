@@ -19,6 +19,7 @@ module Decoder (
     output reg                issue,
     output reg [`ROB_POS_WID] rob_pos,
     output reg [ `OPCODE_WID] opcode,
+    output reg                is_store,
     output reg [ `FUNCT3_WID] funct3,
     output reg                funct7,
     output reg [   `DATA_WID] rs1_val,
@@ -122,6 +123,7 @@ module Decoder (
         rs2_rob_id = reg_rs2_rob_id;
       end
 
+      is_store = 0;
       // mask unused rs1 rs2
       case (inst[`OPCODE_RANGE])
         `OPCODE_S: begin
@@ -129,6 +131,7 @@ module Decoder (
           is_ready = 1;
           rd       = 0;
           imm      = {{21{inst[31]}}, inst[30:25], inst[11:7]};
+          is_store = 1;
         end
         `OPCODE_L: begin
           lsb_en     = 1;

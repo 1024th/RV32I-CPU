@@ -14,7 +14,7 @@ module LSB (
     // issue instruction
     input wire                issue,
     input wire [`ROB_POS_WID] issue_rob_pos,
-    input wire [ `OPCODE_WID] issue_opcode,
+    input wire                issue_is_store,
     input wire [ `FUNCT3_WID] issue_funct3,
     input wire [   `DATA_WID] issue_rs1_val,
     input wire [ `ROB_ID_WID] issue_rs1_rob_id,
@@ -60,7 +60,7 @@ module LSB (
   `define LSB_NPOS 5'd16
 
   reg                busy      [`LSB_SIZE-1:0];
-  reg [ `OPCODE_WID] opcode    [`LSB_SIZE-1:0];
+  reg                is_store  [`LSB_SIZE-1:0];
   reg [ `FUNCT3_WID] funct3    [`LSB_SIZE-1:0];
   reg [ `ROB_ID_WID] rs1_rob_id[`LSB_SIZE-1:0];
   reg [   `DATA_WID] rs1_val   [`LSB_SIZE-1:0];
@@ -78,7 +78,7 @@ module LSB (
 
   wire [`ADDR_WID] head_addr = rs1_val[head] + imm[head];
   wire head_is_io = head_addr[17:16] == 2'b11;
-  wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (opcode[head] == `OPCODE_L && !rollback && (!head_is_io || rob_pos[head] == head_rob_pos) || committed[head]);
+  wire exec_head = !empty && rs1_rob_id[head][4] == 0 && rs2_rob_id[head][4] == 0 && (!is_store[head] && !rollback && (!head_is_io || rob_pos[head] == head_rob_pos) || committed[head]);
   wire pop = status == WAIT_MEM && mc_done;
   wire [`LSB_POS_WID] nxt_head = head + pop;
   wire [`LSB_POS_WID] nxt_tail = tail + issue;
@@ -96,7 +96,7 @@ module LSB (
       empty <= 1;
       for (i = 0; i < `LSB_SIZE; i = i + 1) begin
         busy[i]       <= 0;
-        opcode[i]     <= 0;
+        is_store[i]   <= 0;
         funct3[i]     <= 0;
         rs1_rob_id[i] <= 0;
         rs1_val[i]    <= 0;
@@ -117,11 +117,12 @@ module LSB (
       if (status == WAIT_MEM && mc_done) begin  // finish
         busy[head] <= 0;
         committed[head] <= 0;
-        if (opcode[head] == `OPCODE_L) begin  // this should never happen
-          result <= 1;
-          result_val <= mc_r_data;
-          result_rob_pos <= rob_pos[head];
-        end
+        // Discard load result
+        // if (!is_store[head]) begin
+        //   result <= 1;
+        //   result_val <= mc_r_data;
+        //   result_rob_pos <= rob_pos[head];
+        // end
         if (last_commit_pos[`LSB_POS_WID] == head) begin
           last_commit_pos <= `LSB_NPOS;
           empty <= 1;
@@ -139,7 +140,7 @@ module LSB (
         if (mc_done) begin  // finish
           busy[head] <= 0;
           committed[head] <= 0;
-          if (opcode[head] == `OPCODE_L) begin
+          if (!is_store[head]) begin
             result <= 1;
             case (funct3[head])
               `FUNCT3_LB:  result_val <= {{24{mc_r_data[7]}}, mc_r_data[7:0]};
@@ -158,13 +159,13 @@ module LSB (
         mc_en <= 0;
         if (exec_head) begin
 `ifdef DEBUG
-          $fdisplay(logfile, "will Exec %s @%t", opcode[head] == `OPCODE_S ? "S" : "L", $realtime);
+          $fdisplay(logfile, "will Exec %s @%t", is_store[head] ? "S" : "L", $realtime);
           $fdisplay(logfile, "  addr:%X, w:%X, rob_pos:%X", head_addr, rs2_val[head],
                     rob_pos[head]);
 `endif
           mc_en   <= 1;
           mc_addr <= head_addr;
-          if (opcode[head] == `OPCODE_S) begin
+          if (is_store[head]) begin
             mc_w_data <= rs2_val[head];
             case (funct3[head])
               `FUNCT3_SB: mc_len <= 3'd1;
@@ -221,7 +222,7 @@ module LSB (
       // add instruction
       if (issue) begin
         busy[tail]       <= 1;
-        opcode[tail]     <= issue_opcode;
+        is_store[tail]   <= issue_is_store;
         funct3[tail]     <= issue_funct3;
         rs1_rob_id[tail] <= issue_rs1_rob_id;
         rs1_val[tail]    <= issue_rs1_val;
