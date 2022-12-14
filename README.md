@@ -28,8 +28,10 @@ A RISC-V CPU written in Verilog. Tomasulo's algorithm is applied to support out-
 
 ## FPGA test result
 
-Worst Negative Slack (WNS): 0.108 ns
-Total Negative Slack (TNS): 0.000 ns
+Worst Negative Slack (WNS): 0.108 ns  
+Total Negative Slack (TNS): 0.000 ns  
+Worst Hold Slack (WHS): 0.014 ns  
+Total Hold Slack (THS): 0.000 ns
 
 | testcase       | tims (s)   |
 | -------------- | ---------- |
