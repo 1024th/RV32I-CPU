@@ -38,6 +38,7 @@ module IFetch (
   reg [`ADDR_WID] pc;
   reg status;
 
+  // Instruction Cache
   reg valid[`ICACHE_BLK_NUM-1:0];
   reg [`ICACHE_TAG_WID] tag[`ICACHE_BLK_NUM-1:0];
   reg [`ICACHE_BLK_WID] data[`ICACHE_BLK_NUM-1:0];

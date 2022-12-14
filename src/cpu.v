@@ -39,6 +39,7 @@ module cpu (
 
   // Reorder Buffer rollback signal
   wire                 rollback;
+  // if RS/LSB/ROB is full in next cycle, do not issue new instruction
   wire                 rs_nxt_full;
   wire                 lsb_nxt_full;
   wire                 rob_nxt_full;
