@@ -77,14 +77,11 @@ module RS (
     for (i = 0; i < `RS_SIZE; i = i + 1) begin
       if (ready[i]) ready_pos = i;
     end
-  end
-
-  reg rs_nxt_full_helper[`RS_SIZE-1:0];
-  always @(*) begin
-    rs_nxt_full_helper[0] = busy[0];
+    rs_nxt_full = 1;
     for (i = 1; i < `RS_SIZE; i = i + 1)
-      rs_nxt_full_helper[i] = (busy[i] || issue && i == free_pos) & rs_nxt_full_helper[i-1];
-    rs_nxt_full = rs_nxt_full_helper[`RS_SIZE-1];
+      if (!busy[i] && !(issue && i == free_pos)) begin
+        rs_nxt_full = 0;
+      end
   end
 
   always @(posedge clk) begin
