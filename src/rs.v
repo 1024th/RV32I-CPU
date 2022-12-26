@@ -66,22 +66,19 @@ module RS (
   reg [`RS_ID_WID] ready_pos, free_pos;
   always @(*) begin
     free_pos = `RS_NPOS;
-    for (i = 0; i < `RS_SIZE; i = i + 1) begin
-      if (!busy[i]) free_pos = i;
-    end
-    for (i = 0; i < `RS_SIZE; i = i + 1) begin
-      if (busy[i] && rs1_rob_id[i][4] == 0 && rs2_rob_id[i][4] == 0) ready[i] = 1;
-      else ready[i] = 0;
-    end
     ready_pos = `RS_NPOS;
-    for (i = 0; i < `RS_SIZE; i = i + 1) begin
-      if (ready[i]) ready_pos = i;
-    end
     rs_nxt_full = 1;
-    for (i = 1; i < `RS_SIZE; i = i + 1)
-      if (!busy[i] && !(issue && i == free_pos)) begin
-        rs_nxt_full = 0;
+    for (i = 0; i < `RS_SIZE; i = i + 1) begin
+      ready[i] = 0;
+      if (!busy[i]) begin
+        free_pos = i;
+        if (!(issue && i == free_pos)) rs_nxt_full = 0;
       end
+      if (busy[i] && rs1_rob_id[i][4] == 0 && rs2_rob_id[i][4] == 0) begin
+        ready[i]  = 1;
+        ready_pos = i;
+      end
+    end
   end
 
   always @(posedge clk) begin
